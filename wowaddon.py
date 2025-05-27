@@ -10,7 +10,7 @@ import subprocess
 import sys
 import zipfile
 
-VERSION = '2025.5.5'  # year.month.build_num
+VERSION = '2025.5.0'  # year.month.build_num
 
 ADDON_NAME_CLASSIC = 'AngrySparks'  # Directory and zip name
 ADDON_TITLE_CLASSIC = "Angry Sparks"  # Title field in TOC
@@ -20,7 +20,7 @@ UI_VERSION_CLASSIC_TBC = '20504'  # The Burning Crusade
 UI_VERSION_CLASSIC_WOTLK = '30402'  # WotLK
 UI_VERSION_CLASSIC_CATA = '40402'  # Cataclysm
 
-COPY_DIRS = ['Src', 'Libs', 'Textures', 'Images']
+COPY_DIRS = ['Src', 'Libs', 'Textures']
 COPY_FILES = ['Bindings.xml', 'embeds.xml', 'ANGRYASSIGN_README.md']
 
 SUFFIX_CLASSIC = "-Classic"  # "_Vanilla"

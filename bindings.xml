@@ -1,20 +1,20 @@
 <Bindings>
-	<Binding name="AngryAssign_DISPLAY" header="AngryAssign" category="ADDONS">
-		AngryAssign_ToggleDisplay()
+	<Binding name="AngrySparks_DISPLAY" header="AngrySparks" category="ADDONS">
+		AngrySparks_ToggleDisplay()
 	</Binding>
-	<Binding name="AngryAssign_SHOW_DISPLAY" category="ADDONS">
-		AngryAssign_ShowDisplay()
+	<Binding name="AngrySparks_SHOW_DISPLAY" category="ADDONS">
+		AngrySparks_ShowDisplay()
 	</Binding>
-	<Binding name="AngryAssign_HIDE_DISPLAY" category="ADDONS">
-		AngryAssign_HideDisplay()
+	<Binding name="AngrySparks_HIDE_DISPLAY" category="ADDONS">
+		AngrySparks_HideDisplay()
 	</Binding>
-	<Binding name="AngryAssign_LOCK" category="ADDONS">
-		AngryAssign_ToggleLock()
+	<Binding name="AngrySparks_LOCK" category="ADDONS">
+		AngrySparks_ToggleLock()
 	</Binding>
-	<Binding name="AngryAssign_WINDOW" category="ADDONS">
-		AngryAssign_ToggleWindow()
+	<Binding name="AngrySparks_WINDOW" category="ADDONS">
+		AngrySparks_ToggleWindow()
 	</Binding>
-	<Binding name="AngryAssign_OUTPUT" category="ADDONS">
-		AngryAssign_OutputDisplayed()
+	<Binding name="AngrySparks_OUTPUT" category="ADDONS">
+		AngrySparks_OutputDisplayed()
 	</Binding>
 </Bindings>

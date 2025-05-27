@@ -1,4 +1,7 @@
-local AngryAssign = LibStub("AceAddon-3.0"):NewAddon("AngrySparks", "AceConsole-3.0", "AceEvent-3.0", "AceComm-3.0", "AceTimer-3.0")
+local AngrySparks = LibStub("AceAddon-3.0"):NewAddon(
+	"AngrySparks",
+	"AceConsole-3.0", "AceEvent-3.0", "AceComm-3.0", "AceTimer-3.0"
+)
 local AceGUI = LibStub("AceGUI-3.0")
 local lwin = LibStub("LibWindow-1.1")
 local LSM = LibStub("LibSharedMedia-3.0")
@@ -6,21 +9,21 @@ local libC = LibStub("LibCompress")
 local LibSerialize = LibStub("LibSerialize")
 local LibDeflate = LibStub("LibDeflate")
 
-BINDING_HEADER_AngryAssign = "Angry Girls"
-BINDING_NAME_AngryAssign_WINDOW = "Toggle Window"
-BINDING_NAME_AngryAssign_LOCK = "Toggle Lock"
-BINDING_NAME_AngryAssign_DISPLAY = "Toggle Display"
-BINDING_NAME_AngryAssign_SHOW_DISPLAY = "Show Display"
-BINDING_NAME_AngryAssign_HIDE_DISPLAY = "Hide Display"
-BINDING_NAME_AngryAssign_OUTPUT = "Output Assignment to Chat"
+BINDING_HEADER_AngrySparks = "Angry Girls"
+BINDING_NAME_AngrySparks_WINDOW = "Toggle Window"
+BINDING_NAME_AngrySparks_LOCK = "Toggle Lock"
+BINDING_NAME_AngrySparks_DISPLAY = "Toggle Display"
+BINDING_NAME_AngrySparks_SHOW_DISPLAY = "Show Display"
+BINDING_NAME_AngrySparks_HIDE_DISPLAY = "Hide Display"
+BINDING_NAME_AngrySparks_OUTPUT = "Output Assignment to Chat"
 
-local AngryAssign_Version = '@project-version@'
-local AngryAssign_Timestamp = '@project-date-integer@'
+local AngrySparks_Version = '@project-version@'
+local AngrySparks_Timestamp = '@project-date-integer@'
 
 local isClassic = (WOW_PROJECT_ID == WOW_PROJECT_BURNING_CRUSADE_CLASSIC)
 
 local protocolVersion = 3
-local comPrefix = "AngryGirls"..protocolVersion
+local comPrefix = "AngryGirls" .. protocolVersion
 local updateThrottle = 4
 local pageLastUpdate = {}
 local pageTimerId = {}
@@ -40,15 +43,15 @@ local warnedPermission = false
 local currentGroup = nil
 
 -- Pages Saved Variable Format
--- 	AngryAssign_Pages = {
+-- 	AngrySparks_Pages = {
 -- 		[Id] = { Id = 1231, Updated = time(), UpdateId = self:Hash(name, contents), Name = "Name", Contents = "...", Backup = "...", CategoryId = 123 },
 --		...
 -- 	}
--- 	AngryAssign_Categories = {
+-- 	AngrySparks_Categories = {
 -- 		[Id] = { Id = 1231, Name = "Name", CategoryId = 123 },
 --		...
 -- 	}
--- 	AngryAssign_Variables = {
+-- 	AngrySparks_Variables = {
 -- 		[1] = { "variable", "replacement" },
 --		...
 -- 	}
@@ -96,16 +99,17 @@ local VERSION_ValidRaid = 4
 --@debug@
 function DBG_dump(o)
 	if type(o) == 'table' then
-	   local s = '{ '
-	   for k,v in pairs(o) do
-		  if type(k) ~= 'number' then k = '"'..k..'"' end
-		  s = s .. '['..k..'] = ' .. DBG_dump(v) .. ','
-	   end
-	   return s .. '} '
+		local s = '{ '
+		for k, v in pairs(o) do
+			if type(k) ~= 'number' then k = '"' .. k .. '"' end
+			s = s .. '[' .. k .. '] = ' .. DBG_dump(v) .. ','
+		end
+		return s .. '} '
 	else
-	   return tostring(o)
+		return tostring(o)
 	end
 end
+
 --@end-debug@
 
 --@alpha@
@@ -115,7 +119,8 @@ local function dbg(msg, data)
 		ViragDevTool_AddData(data, msg)
 	else
 		if not dbgMessageShown then
-			print("Please install ViragDevTool from http://mods.curse.com/addons/wow/varrendevtool to view debug info for Angry Girls.")
+			print(
+				"Please install ViragDevTool from http://mods.curse.com/addons/wow/varrendevtool to view debug info for Angry Girls.")
 			dbgMessageShown = true
 		end
 	end
@@ -127,17 +132,18 @@ local function explode(seperator, content)
 	t = {}
 	position = 0
 	if (#content == 1) then
-	   return {content}
+		return { content }
 	end
 	while true do
-	   local idx = string.find(content, seperator, position, true) -- find the next seperator in the string
-	   if idx ~= nil then -- if "not not" found then..
-		  table.insert(t, string.sub(content, position, idx - 1)) -- Save it in our array.
-		  position = idx + #seperator -- save just after where we found it for searching next time.
-	   else
-		  table.insert(t, string.sub(content, position)) -- Save what's left in our array.
-		  break -- Break at end, as it should be, according to the lua manual.
-	   end
+		local idx = string.find(content, seperator, position, true) -- find the next seperator in the string
+		if idx ~= nil then                                    -- if "not not" found then..
+			table.insert(t, string.sub(content, position, idx - 1)) -- Save it in our array.
+			position = idx +
+				#seperator                                    -- save just after where we found it for searching next time.
+		else
+			table.insert(t, string.sub(content, position))    -- Save what's left in our array.
+			break                                             -- Break at end, as it should be, according to the lua manual.
+		end
 	end
 	return t
 end
@@ -148,7 +154,7 @@ local function selectedLastValue(input)
 end
 
 local function tReverse(tbl)
-	for i=1, math.floor(#tbl / 2) do
+	for i = 1, math.floor(#tbl / 2) do
 		tbl[i], tbl[#tbl - i + 1] = tbl[#tbl - i + 1], tbl[i]
 	end
 end
@@ -157,7 +163,7 @@ local _player_realm = nil
 local function EnsureUnitFullName(unit)
 	if not _player_realm then _player_realm = select(2, UnitFullName('player')) end
 	if unit and not unit:find('-') then
-		unit = unit..'-'.._player_realm
+		unit = unit .. '-' .. _player_realm
 	end
 	return unit
 end
@@ -174,7 +180,7 @@ end
 
 local function PlayerFullName()
 	if not _player_realm then _player_realm = select(2, UnitFullName('player')) end
-	return UnitName('player')..'-'.._player_realm
+	return UnitName('player') .. '-' .. _player_realm
 end
 
 local function RGBToHex(r, g, b, a)
@@ -191,9 +197,11 @@ end
 
 local function HexToRGB(hex)
 	if string.len(hex) == 8 then
-		return tonumber("0x"..hex:sub(1,2)) / 255, tonumber("0x"..hex:sub(3,4)) / 255, tonumber("0x"..hex:sub(5,6)) / 255, tonumber("0x"..hex:sub(7,8)) / 255
+		return tonumber("0x" .. hex:sub(1, 2)) / 255, tonumber("0x" .. hex:sub(3, 4)) / 255,
+			tonumber("0x" .. hex:sub(5, 6)) / 255, tonumber("0x" .. hex:sub(7, 8)) / 255
 	else
-		return tonumber("0x"..hex:sub(1,2)) / 255, tonumber("0x"..hex:sub(3,4)) / 255, tonumber("0x"..hex:sub(5,6)) / 255
+		return tonumber("0x" .. hex:sub(1, 2)) / 255, tonumber("0x" .. hex:sub(3, 4)) / 255,
+			tonumber("0x" .. hex:sub(5, 6)) / 255
 	end
 end
 
@@ -201,23 +209,23 @@ end
 -- Addon Communication --
 -------------------------
 
-function AngryAssign:ReceiveMessage(prefix, data, channel, sender)
+function AngrySparks:ReceiveMessage(prefix, data, channel, sender)
 	if prefix ~= comPrefix then return end
 
-    local decoded = LibDeflate:DecodeForWoWAddonChannel(data)
-    if not decoded then return end
-    local decompressed = LibDeflate:DecompressDeflate(decoded)
-    if not decompressed then return end
-    local success, final = LibSerialize:Deserialize(decompressed)
-    if not success then return end
+	local decoded = LibDeflate:DecodeForWoWAddonChannel(data)
+	if not decoded then return end
+	local decompressed = LibDeflate:DecompressDeflate(decoded)
+	if not decompressed then return end
+	local success, final = LibSerialize:Deserialize(decompressed)
+	if not success then return end
 
-	self:ProcessMessage( sender, final )
+	self:ProcessMessage(sender, final)
 end
 
-function AngryAssign:SendOutMessage(data, channel, target)
-    local serialized = LibSerialize:Serialize(data)
-    local compressed = LibDeflate:CompressDeflate(serialized)
-    local encoded = LibDeflate:EncodeForWoWAddonChannel(compressed)
+function AngrySparks:SendOutMessage(data, channel, target)
+	local serialized = LibSerialize:Serialize(data)
+	local compressed = LibDeflate:CompressDeflate(serialized)
+	local encoded = LibDeflate:EncodeForWoWAddonChannel(compressed)
 
 	if not channel then
 		if IsInGroup(LE_PARTY_CATEGORY_INSTANCE) or IsInRaid(LE_PARTY_CATEGORY_INSTANCE) then
@@ -232,18 +240,18 @@ function AngryAssign:SendOutMessage(data, channel, target)
 	if not channel then return end
 
 	--@alpha@
-	dbg("AG Send Message "..data[COMMAND], {target, channel, data, string.len(encoded)})
+	dbg("AG Send Message " .. data[COMMAND], { target, channel, data, string.len(encoded) })
 	--@end-alpha@
 	self:SendCommMessage(comPrefix, encoded, channel, target, "BULK")
 	return true
 end
 
-function AngryAssign:ProcessMessage(sender, data)
+function AngrySparks:ProcessMessage(sender, data)
 	local cmd = data[COMMAND]
 	sender = EnsureUnitFullName(sender)
 
 	--@alpha@
-	dbg("AG Process "..cmd, {sender, data})
+	dbg("AG Process " .. cmd, { sender, data })
 	--@end-alpha@
 
 	if cmd == "PAGE" then
@@ -255,36 +263,42 @@ function AngryAssign:ProcessMessage(sender, data)
 
 		local contents_updated = true
 		local id = data[PAGE_Id]
-		local page = AngryAssign_Pages[id]
+		local page = AngrySparks_Pages[id]
 		if page then
 			if data[PAGE_UpdateId] and page.UpdateId == data[PAGE_UpdateId] then return end -- The version received is same as the one we already have
 
 			contents_updated = page.Contents ~= data[PAGE_Contents]
 
-			AngryAssign_Variables = data[PAGE_Variables]
+			AngrySparks_Variables = data[PAGE_Variables]
 
 			page.Name = data[PAGE_Name]
 			page.Contents = data[PAGE_Contents]
 			page.Updated = data[PAGE_Updated]
-			page.UpdateId = data[PAGE_UpdateId] or self:Hash(page.Name, page.Contents, AngryAssign:VariablesToString())
+			page.UpdateId = data[PAGE_UpdateId] or self:Hash(page.Name, page.Contents, AngrySparks:VariablesToString())
 
 			if self:SelectedId() == id then
 				self:SelectedUpdated(sender)
 				self:UpdateSelected()
 			end
 		else
-			AngryAssign_Pages[id] = { Id = id, Updated = data[PAGE_Updated], UpdateId = data[PAGE_UpdateId], Name = data[PAGE_Name], Contents = data[PAGE_Contents] }
-			AngryAssign_Variables = data[PAGE_Variables]
+			AngrySparks_Pages[id] = {
+				Id = id,
+				Updated = data[PAGE_Updated],
+				UpdateId = data[PAGE_UpdateId],
+				Name = data
+					[PAGE_Name],
+				Contents = data[PAGE_Contents]
+			}
+			AngrySparks_Variables = data[PAGE_Variables]
 		end
 
-		if AngryAssign_State.displayed == id then
+		if AngrySparks_State.displayed == id then
 			self:UpdateDisplayed()
 			self:ShowDisplay()
 			if contents_updated then self:DisplayUpdateNotification() end
 		end
 
 		self:UpdateTree()
-
 	elseif cmd == "DISPLAY" then
 		if sender == PlayerFullName() then return end
 		if not self:PermissionCheck(sender) then
@@ -295,41 +309,40 @@ function AngryAssign:ProcessMessage(sender, data)
 		local id = data[DISPLAY_Id]
 		local updated = data[DISPLAY_Updated]
 		local updateId = data[DISPLAY_UpdateId]
-		local page = AngryAssign_Pages[id]
-		local sameVersion = (updateId and page and updateId == page.UpdateId) or (not updateId and page and updated == page.Updated)
+		local page = AngrySparks_Pages[id]
+		local sameVersion = (updateId and page and updateId == page.UpdateId) or
+			(not updateId and page and updated == page.Updated)
 		if id and not sameVersion then
 			self:SendRequestPage(id, sender)
 		end
 
-		if AngryAssign_State.displayed ~= id then
-			AngryAssign_State.displayed = id
+		if AngrySparks_State.displayed ~= id then
+			AngrySparks_State.displayed = id
 			self:UpdateTree()
 			self:UpdateDisplayed()
 			self:ShowDisplay()
 			if id then self:DisplayUpdateNotification() end
 		end
-
 	elseif cmd == "REQUEST_DISPLAY" then
 		if sender == PlayerFullName() then return end
 		if not self:IsPlayerRaidLeader() then return end
 
-		self:SendDisplay( AngryAssign_State.displayed )
-
+		self:SendDisplay(AngrySparks_State.displayed)
 	elseif cmd == "REQUEST_PAGE" then
 		if sender == PlayerFullName() then return end
 
-		self:SendPage( data[REQUEST_PAGE_Id] )
-
-
+		self:SendPage(data[REQUEST_PAGE_Id])
 	elseif cmd == "VER_QUERY" then
-
 		self:SendVersion()
-
-
 	elseif cmd == "VERSION" then
 		local localTimestamp, ver, timestamp
 
-		if AngryAssign_Timestamp:sub(1,1) == "@" then localTimestamp = "dev" else localTimestamp = tonumber(AngryAssign_Timestamp) end
+		if AngrySparks_Timestamp:sub(1, 1) == "@" then
+			localTimestamp = "dev"
+		else
+			localTimestamp = tonumber(
+				AngrySparks_Timestamp)
+		end
 		ver = data[VERSION_Version]
 		timestamp = data[VERSION_Timestamp]
 
@@ -337,27 +350,31 @@ function AngryAssign:ProcessMessage(sender, data)
 		local remoteStr = tostring(timestamp)
 
 		if (localStr ~= "dev" and localStr:len() ~= 14) or (remoteStr ~= "dev" and remoteStr:len() ~= 14) then
-			if localStr ~= "dev" then localTimestamp = tonumber(localStr:sub(1,8)) end
-			if remoteStr ~= "dev" then timestamp = tonumber(remoteStr:sub(1,8)) end
+			if localStr ~= "dev" then localTimestamp = tonumber(localStr:sub(1, 8)) end
+			if remoteStr ~= "dev" then timestamp = tonumber(remoteStr:sub(1, 8)) end
 		end
 
 		if localTimestamp ~= "dev" and timestamp ~= "dev" and timestamp > localTimestamp and not warnedOOD then
-			self:Print("Your version of Angry Girls is out of date! Download the latest version from https://www.curseforge.com/wow/addons/angry-girls.")
+			self:Print(
+				"Your version of Angry Girls is out of date! Download the latest version from https://www.curseforge.com/wow/addons/angry-girls.")
 			warnedOOD = true
 		end
 
-		versionList[ sender ] = { valid = data[VERSION_ValidRaid], version = ver }
+		versionList[sender] = { valid = data[VERSION_ValidRaid], version = ver }
 	end
 end
 
-function AngryAssign:PermissionCheckFailError(sender)
+function AngrySparks:PermissionCheckFailError(sender)
 	if not warnedPermission then
-		self:Print( RED_FONT_COLOR_CODE .. "You have received a page update from "..Ambiguate(sender, "none").." that was rejected due to insufficient permissions. If you wish to see this page, please adjust your permission settings.|r" )
+		self:Print(RED_FONT_COLOR_CODE ..
+			"You have received a page update from " ..
+			Ambiguate(sender, "none") ..
+			" that was rejected due to insufficient permissions. If you wish to see this page, please adjust your permission settings.|r")
 		warnedPermission = true
 	end
 end
 
-function AngryAssign:SendPage(id, force)
+function AngrySparks:SendPage(id, force)
 	local lastUpdate = pageLastUpdate[id]
 	local timerId = pageTimerId[id]
 	local curTime = time()
@@ -370,7 +387,7 @@ function AngryAssign:SendPage(id, force)
 				pageTimerId[id] = self:ScheduleTimer("SendPageMessage", updateThrottle - (curTime - lastUpdate), id)
 			end
 		elseif force then
-			self:CancelTimer( timerId )
+			self:CancelTimer(timerId)
 			self:SendPageMessage(id)
 		end
 	else
@@ -378,21 +395,31 @@ function AngryAssign:SendPage(id, force)
 	end
 end
 
-function AngryAssign:SendPageMessage(id)
+function AngrySparks:SendPageMessage(id)
 	pageLastUpdate[id] = time()
 	pageTimerId[id] = nil
 
-	local page = AngryAssign_Pages[ id ]
-	if not page then error("Can't send page, does not exist"); return end
-
-	if not page.UpdateId then
-		page.UpdateId = self:Hash(page.Name, page.Contents, AngryAssign:VariablesToString())
+	local page = AngrySparks_Pages[id]
+	if not page then
+		error("Can't send page, does not exist"); return
 	end
 
-	self:SendOutMessage({ "PAGE", [PAGE_Id] = page.Id, [PAGE_Updated] = page.Updated, [PAGE_Name] = page.Name, [PAGE_Contents] = page.Contents, [PAGE_UpdateId] = page.UpdateId, [PAGE_Variables] = AngryAssign_Variables })
+	if not page.UpdateId then
+		page.UpdateId = self:Hash(page.Name, page.Contents, AngrySparks:VariablesToString())
+	end
+
+	self:SendOutMessage({
+		"PAGE",
+		[PAGE_Id] = page.Id,
+		[PAGE_Updated] = page.Updated,
+		[PAGE_Name] = page.Name,
+		[PAGE_Contents] = page.Contents,
+		[PAGE_UpdateId] = page.UpdateId,
+		[PAGE_Variables] = AngrySparks_Variables
+	})
 end
 
-function AngryAssign:SendDisplay(id, force)
+function AngrySparks:SendDisplay(id, force)
 	local curTime = time()
 
 	if displayLastUpdate and (curTime - displayLastUpdate <= updateThrottle) then
@@ -400,10 +427,11 @@ function AngryAssign:SendDisplay(id, force)
 			if force then
 				self:SendDisplayMessage(id)
 			else
-				displayTimerId = self:ScheduleTimer("SendDisplayMessage", updateThrottle - (curTime - displayLastUpdate), id)
+				displayTimerId = self:ScheduleTimer("SendDisplayMessage", updateThrottle - (curTime - displayLastUpdate),
+					id)
 			end
 		elseif force then
-			self:CancelTimer( displayTimerId )
+			self:CancelTimer(displayTimerId)
 			self:SendDisplayMessage(id)
 		end
 	else
@@ -411,29 +439,35 @@ function AngryAssign:SendDisplay(id, force)
 	end
 end
 
-function AngryAssign:SendDisplayMessage(id)
+function AngrySparks:SendDisplayMessage(id)
 	displayLastUpdate = time()
 	displayTimerId = nil
 
-	local page = AngryAssign_Pages[ id ]
+	local page = AngrySparks_Pages[id]
 	if not page then
 		self:SendOutMessage({ "DISPLAY", [DISPLAY_Id] = nil, [DISPLAY_Updated] = nil, [DISPLAY_UpdateId] = nil })
 	else
 		if not page.UpdateId then
 			self:RehashPage(id)
 		end
-		self:SendOutMessage({ "DISPLAY", [DISPLAY_Id] = page.Id, [DISPLAY_Updated] = page.Updated, [DISPLAY_UpdateId] = page.UpdateId })
+		self:SendOutMessage({
+			"DISPLAY",
+			[DISPLAY_Id] = page.Id,
+			[DISPLAY_Updated] = page.Updated,
+			[DISPLAY_UpdateId] =
+				page.UpdateId
+		})
 	end
 end
 
-function AngryAssign:SendRequestDisplay()
+function AngrySparks:SendRequestDisplay()
 	if (IsInRaid() or IsInGroup()) then
 		local to = self:GetRaidLeader(true)
 		if to then self:SendOutMessage({ "REQUEST_DISPLAY" }, "WHISPER", to) end
 	end
 end
 
-function AngryAssign:SendVersion(force)
+function AngrySparks:SendVersion(force)
 	local curTime = time()
 
 	if versionLastUpdate and (curTime - versionLastUpdate <= updateThrottle) then
@@ -441,10 +475,11 @@ function AngryAssign:SendVersion(force)
 			if force then
 				self:SendVersionMessage(id)
 			else
-				versionTimerId = self:ScheduleTimer("SendVersionMessage", updateThrottle - (curTime - versionLastUpdate), id)
+				versionTimerId = self:ScheduleTimer("SendVersionMessage", updateThrottle - (curTime - versionLastUpdate),
+					id)
 			end
 		elseif force then
-			self:CancelTimer( versionTimerId )
+			self:CancelTimer(versionTimerId)
 			self:SendVersionMessage()
 		end
 	else
@@ -452,31 +487,40 @@ function AngryAssign:SendVersion(force)
 	end
 end
 
-function AngryAssign:SendVersionMessage()
+function AngrySparks:SendVersionMessage()
 	versionLastUpdate = time()
 	versionTimerId = nil
 
 	local revToSend
 	local timestampToSend
 	local verToSend
-	if AngryAssign_Version:sub(1,1) == "@" then verToSend = "dev" else verToSend = AngryAssign_Version end
-	if AngryAssign_Timestamp:sub(1,1) == "@" then timestampToSend = "dev" else timestampToSend = tonumber(AngryAssign_Timestamp) end
-	self:SendOutMessage({ "VERSION", [VERSION_Version] = verToSend, [VERSION_Timestamp] = timestampToSend, [VERSION_ValidRaid] = self:IsValidRaid() })
+	if AngrySparks_Version:sub(1, 1) == "@" then verToSend = "dev" else verToSend = AngrySparks_Version end
+	if AngrySparks_Timestamp:sub(1, 1) == "@" then
+		timestampToSend = "dev"
+	else
+		timestampToSend = tonumber(
+			AngrySparks_Timestamp)
+	end
+	self:SendOutMessage({
+		"VERSION",
+		[VERSION_Version] = verToSend,
+		[VERSION_Timestamp] = timestampToSend,
+		[VERSION_ValidRaid] = self:IsValidRaid()
+	})
 end
 
-
-function AngryAssign:SendVerQuery()
+function AngrySparks:SendVerQuery()
 	self:SendOutMessage({ "VER_QUERY" })
 end
 
-function AngryAssign:SendRequestPage(id, to)
+function AngrySparks:SendRequestPage(id, to)
 	if (IsInRaid() or IsInGroup()) or to then
 		if not to then to = self:GetRaidLeader(true) end
 		if to then self:SendOutMessage({ "REQUEST_PAGE", [REQUEST_PAGE_Id] = id }, "WHISPER", to) end
 	end
 end
 
-function AngryAssign:GetRaidLeader(online_only)
+function AngrySparks:GetRaidLeader(online_only)
 	if (IsInRaid() or IsInGroup()) then
 		for i = 1, GetNumGroupMembers() do
 			local name, rank, subgroup, level, class, fileName, zone, online, isDead, role, isML = GetRaidRosterInfo(i)
@@ -492,7 +536,7 @@ function AngryAssign:GetRaidLeader(online_only)
 	return nil
 end
 
-function AngryAssign:GetCurrentGroup()
+function AngrySparks:GetCurrentGroup()
 	local player = PlayerFullName()
 	if (IsInRaid() or IsInGroup()) then
 		for i = 1, GetNumGroupMembers() do
@@ -505,26 +549,26 @@ function AngryAssign:GetCurrentGroup()
 	return nil
 end
 
-function AngryAssign:VersionCheckOutput()
+function AngrySparks:VersionCheckOutput()
 	local missing_addon = {}
 	local invalid_raid = {}
 	local different_version = {}
 	local up_to_date = {}
 
-	local ver = AngryAssign_Version
-	if ver:sub(1,1) == "@" then ver = "dev" end
+	local ver = AngrySparks_Version
+	if ver:sub(1, 1) == "@" then ver = "dev" end
 
 	if (IsInRaid() or IsInGroup()) then
 		for i = 1, GetNumGroupMembers() do
 			local name, _, _, _, _, _, _, online = GetRaidRosterInfo(i)
 			local fullname = EnsureUnitFullName(name)
 			if online then
-				if not versionList[ fullname ] then
+				if not versionList[fullname] then
 					tinsert(missing_addon, name)
-				elseif versionList[ fullname ].valid == false or versionList[ fullname ].valid == nil then
+				elseif versionList[fullname].valid == false or versionList[fullname].valid == nil then
 					tinsert(invalid_raid, name)
-				elseif ver ~= versionList[ fullname ].version then
-					tinsert(different_version, string.format("%s - %s", name, versionList[ fullname ].version)  )
+				elseif ver ~= versionList[fullname].version then
+					tinsert(different_version, string.format("%s - %s", name, versionList[fullname].version))
 				else
 					tinsert(up_to_date, name)
 				end
@@ -534,19 +578,19 @@ function AngryAssign:VersionCheckOutput()
 
 	self:Print("Version check results:")
 	if #up_to_date > 0 then
-		print(LIGHTYELLOW_FONT_COLOR_CODE.."Same version:|r "..table.concat(up_to_date, ", "))
+		print(LIGHTYELLOW_FONT_COLOR_CODE .. "Same version:|r " .. table.concat(up_to_date, ", "))
 	end
 
 	if #different_version > 0 then
-		print(LIGHTYELLOW_FONT_COLOR_CODE.."Different version:|r "..table.concat(different_version, ", "))
+		print(LIGHTYELLOW_FONT_COLOR_CODE .. "Different version:|r " .. table.concat(different_version, ", "))
 	end
 
 	if #invalid_raid > 0 then
-		print(LIGHTYELLOW_FONT_COLOR_CODE.."Not allowing changes:|r "..table.concat(invalid_raid, ", "))
+		print(LIGHTYELLOW_FONT_COLOR_CODE .. "Not allowing changes:|r " .. table.concat(invalid_raid, ", "))
 	end
 
 	if #missing_addon > 0 then
-		print(LIGHTYELLOW_FONT_COLOR_CODE.."Missing addon:|r "..table.concat(missing_addon, ", "))
+		print(LIGHTYELLOW_FONT_COLOR_CODE .. "Missing addon:|r " .. table.concat(missing_addon, ", "))
 	end
 end
 
@@ -554,32 +598,32 @@ end
 -- Editing Pages Window --
 --------------------------
 
-function AngryAssign_ToggleWindow()
-	if not AngryAssign.window then AngryAssign:CreateWindow() end
-	if AngryAssign.window:IsShown() then
-		AngryAssign.window:Hide()
+function AngrySparks_ToggleWindow()
+	if not AngrySparks.window then AngrySparks:CreateWindow() end
+	if AngrySparks.window:IsShown() then
+		AngrySparks.window:Hide()
 	else
-		AngryAssign.window:Show()
+		AngrySparks.window:Show()
 	end
 end
 
-function AngryAssign_ToggleLock()
-	AngryAssign:ToggleLock()
+function AngrySparks_ToggleLock()
+	AngrySparks:ToggleLock()
 end
 
-local function AngryAssign_AddPage(widget, event, value)
-	local popup_name = "AngryAssign_AddPage"
+local function AngrySparks_AddPage(widget, event, value)
+	local popup_name = "AngrySparks_AddPage"
 	if StaticPopupDialogs[popup_name] == nil then
 		StaticPopupDialogs[popup_name] = {
 			button1 = OKAY,
 			button2 = CANCEL,
 			OnAccept = function(self)
 				local text = self.editBox:GetText()
-				if text ~= "" then AngryAssign:CreatePage(text) end
+				if text ~= "" then AngrySparks:CreatePage(text) end
 			end,
 			EditBoxOnEnterPressed = function(self)
 				local text = self:GetParent().editBox:GetText()
-				if text ~= "" then AngryAssign:CreatePage(text) end
+				if text ~= "" then AngrySparks:CreatePage(text) end
 				self:GetParent():Hide()
 			end,
 			text = "New page name:",
@@ -593,22 +637,22 @@ local function AngryAssign_AddPage(widget, event, value)
 	StaticPopup_Show(popup_name)
 end
 
-local function AngryAssign_RenamePage(pageId)
-	local page = AngryAssign:Get(pageId)
+local function AngrySparks_RenamePage(pageId)
+	local page = AngrySparks:Get(pageId)
 	if not page then return end
 
-	local popup_name = "AngryAssign_RenamePage_"..page.Id
+	local popup_name = "AngrySparks_RenamePage_" .. page.Id
 	if StaticPopupDialogs[popup_name] == nil then
 		StaticPopupDialogs[popup_name] = {
 			button1 = OKAY,
 			button2 = CANCEL,
 			OnAccept = function(self)
 				local text = self.editBox:GetText()
-				AngryAssign:RenamePage(page.Id, text)
+				AngrySparks:RenamePage(page.Id, text)
 			end,
 			EditBoxOnEnterPressed = function(self)
 				local text = self:GetParent().editBox:GetText()
-				AngryAssign:RenamePage(page.Id, text)
+				AngrySparks:RenamePage(page.Id, text)
 				self:GetParent():Hide()
 			end,
 			OnShow = function(self)
@@ -621,46 +665,46 @@ local function AngryAssign_RenamePage(pageId)
 			preferredIndex = 3
 		}
 	end
-	StaticPopupDialogs[popup_name].text = 'Rename page "'.. page.Name ..'" to:'
+	StaticPopupDialogs[popup_name].text = 'Rename page "' .. page.Name .. '" to:'
 
 	StaticPopup_Show(popup_name)
 end
 
-local function AngryAssign_DeletePage(pageId)
-	local page = AngryAssign:Get(pageId)
+local function AngrySparks_DeletePage(pageId)
+	local page = AngrySparks:Get(pageId)
 	if not page then return end
 
-	local popup_name = "AngryAssign_DeletePage_"..page.Id
+	local popup_name = "AngrySparks_DeletePage_" .. page.Id
 	if StaticPopupDialogs[popup_name] == nil then
 		StaticPopupDialogs[popup_name] = {
 			button1 = OKAY,
 			button2 = CANCEL,
 			OnAccept = function(self)
-				AngryAssign:DeletePage(page.Id)
+				AngrySparks:DeletePage(page.Id)
 			end,
 			whileDead = true,
 			hideOnEscape = true,
 			preferredIndex = 3
 		}
 	end
-	StaticPopupDialogs[popup_name].text = 'Are you sure you want to delete page "'.. page.Name ..'"?'
+	StaticPopupDialogs[popup_name].text = 'Are you sure you want to delete page "' .. page.Name .. '"?'
 
 	StaticPopup_Show(popup_name)
 end
 
-local function AngryAssign_AddCategory(widget, event, value)
-	local popup_name = "AngryAssign_AddCategory"
+local function AngrySparks_AddCategory(widget, event, value)
+	local popup_name = "AngrySparks_AddCategory"
 	if StaticPopupDialogs[popup_name] == nil then
 		StaticPopupDialogs[popup_name] = {
 			button1 = OKAY,
 			button2 = CANCEL,
 			OnAccept = function(self)
 				local text = self.editBox:GetText()
-				if text ~= "" then AngryAssign:CreateCategory(text) end
+				if text ~= "" then AngrySparks:CreateCategory(text) end
 			end,
 			EditBoxOnEnterPressed = function(self)
 				local text = self:GetParent().editBox:GetText()
-				if text ~= "" then AngryAssign:CreateCategory(text) end
+				if text ~= "" then AngrySparks:CreateCategory(text) end
 				self:GetParent():Hide()
 			end,
 			text = "New category name:",
@@ -674,22 +718,22 @@ local function AngryAssign_AddCategory(widget, event, value)
 	StaticPopup_Show(popup_name)
 end
 
-local function AngryAssign_RenameCategory(catId)
-	local cat = AngryAssign:GetCat(catId)
+local function AngrySparks_RenameCategory(catId)
+	local cat = AngrySparks:GetCat(catId)
 	if not cat then return end
 
-	local popup_name = "AngryAssign_RenameCategory_"..cat.Id
+	local popup_name = "AngrySparks_RenameCategory_" .. cat.Id
 	if StaticPopupDialogs[popup_name] == nil then
 		StaticPopupDialogs[popup_name] = {
 			button1 = OKAY,
 			button2 = CANCEL,
 			OnAccept = function(self)
 				local text = self.editBox:GetText()
-				AngryAssign:RenameCategory(cat.Id, text)
+				AngrySparks:RenameCategory(cat.Id, text)
 			end,
 			EditBoxOnEnterPressed = function(self)
 				local text = self:GetParent().editBox:GetText()
-				AngryAssign:RenameCategory(cat.Id, text)
+				AngrySparks:RenameCategory(cat.Id, text)
 				self:GetParent():Hide()
 			end,
 			OnShow = function(self)
@@ -702,125 +746,136 @@ local function AngryAssign_RenameCategory(catId)
 			preferredIndex = 3
 		}
 	end
-	StaticPopupDialogs[popup_name].text = 'Rename category "'.. cat.Name ..'" to:'
+	StaticPopupDialogs[popup_name].text = 'Rename category "' .. cat.Name .. '" to:'
 
 	StaticPopup_Show(popup_name)
 end
 
-local function AngryAssign_DeleteCategory(catId)
-	local cat = AngryAssign:GetCat(catId)
+local function AngrySparks_DeleteCategory(catId)
+	local cat = AngrySparks:GetCat(catId)
 	if not cat then return end
 
-	local popup_name = "AngryAssign_DeleteCategory_"..cat.Id
+	local popup_name = "AngrySparks_DeleteCategory_" .. cat.Id
 	if StaticPopupDialogs[popup_name] == nil then
 		StaticPopupDialogs[popup_name] = {
 			button1 = OKAY,
 			button2 = CANCEL,
 			OnAccept = function(self)
-				AngryAssign:DeleteCategory(cat.Id)
+				AngrySparks:DeleteCategory(cat.Id)
 			end,
 			whileDead = true,
 			hideOnEscape = true,
 			preferredIndex = 3
 		}
 	end
-	StaticPopupDialogs[popup_name].text = 'Are you sure you want to delete category "'.. cat.Name ..'"?'
+	StaticPopupDialogs[popup_name].text = 'Are you sure you want to delete category "' .. cat.Name .. '"?'
 
 	StaticPopup_Show(popup_name)
 end
 
-local function AngryAssign_AssignCategory(frame, entryId, catId)
+local function AngrySparks_AssignCategory(frame, entryId, catId)
 	HideDropDownMenu(1)
 
-	AngryAssign:AssignCategory(entryId, catId)
+	AngrySparks:AssignCategory(entryId, catId)
 end
 
-local function AngryAssign_RevertPage(widget, event, value)
-	if not AngryAssign.window then return end
-	AngryAssign:UpdateSelected(true)
+local function AngrySparks_RevertPage(widget, event, value)
+	if not AngrySparks.window then return end
+	AngrySparks:UpdateSelected(true)
 end
 
-function AngryAssign:DisplayPageByName( name )
-	for id, page in pairs(AngryAssign_Pages) do
+function AngrySparks:DisplayPageByName(name)
+	for id, page in pairs(AngrySparks_Pages) do
 		if page.Name == name then
-			return self:DisplayPage( id )
+			return self:DisplayPage(id)
 		end
 	end
 	return false
 end
 
-function AngryAssign:DisplayPage( id )
+function AngrySparks:DisplayPage(id)
 	if not self:PermissionCheck() then return end
 
-	self:TouchPage( id )
-	self:SendPage( id, true )
-	self:SendDisplay( id, true )
+	self:TouchPage(id)
+	self:SendPage(id, true)
+	self:SendDisplay(id, true)
 
-	if AngryAssign_State.displayed ~= id then
-		AngryAssign_State.displayed = id
-		AngryAssign:UpdateDisplayed()
-		AngryAssign:ShowDisplay()
-		AngryAssign:UpdateTree()
-		AngryAssign:DisplayUpdateNotification()
+	if AngrySparks_State.displayed ~= id then
+		AngrySparks_State.displayed = id
+		AngrySparks:UpdateDisplayed()
+		AngrySparks:ShowDisplay()
+		AngrySparks:UpdateTree()
+		AngrySparks:DisplayUpdateNotification()
 	end
 
 	return true
 end
 
-local function AngryAssign_DisplayPage(widget, event, value)
-	if not AngryAssign:PermissionCheck() then return end
-	local id = AngryAssign:SelectedId()
-	AngryAssign:DisplayPage( id )
+local function AngrySparks_DisplayPage(widget, event, value)
+	if not AngrySparks:PermissionCheck() then return end
+	local id = AngrySparks:SelectedId()
+	AngrySparks:DisplayPage(id)
 end
 
-local function AngryAssign_ClearPage(widget, event, value)
-	if not AngryAssign:PermissionCheck() then return end
+local function AngrySparks_ClearPage(widget, event, value)
+	if not AngrySparks:PermissionCheck() then return end
 
-	AngryAssign:ClearDisplayed()
-	AngryAssign:SendDisplay( nil, true )
+	AngrySparks:ClearDisplayed()
+	AngrySparks:SendDisplay(nil, true)
 end
 
-local function AngryAssign_TextChanged(widget, event, value)
-	AngryAssign.window.button_revert:SetDisabled(false)
-	AngryAssign.window.button_restore:SetDisabled(false)
-	AngryAssign.window.button_display:SetDisabled(true)
-	AngryAssign.window.button_output:SetDisabled(true)
+local function AngrySparks_TextChanged(widget, event, value)
+	AngrySparks.window.button_revert:SetDisabled(false)
+	AngrySparks.window.button_restore:SetDisabled(false)
+	AngrySparks.window.button_display:SetDisabled(true)
+	AngrySparks.window.button_output:SetDisabled(true)
 end
 
-local function AngryAssign_TextEntered(widget, event, value)
-	AngryAssign:UpdateContents(AngryAssign:SelectedId(), value)
+local function AngrySparks_TextEntered(widget, event, value)
+	AngrySparks:UpdateContents(AngrySparks:SelectedId(), value)
 end
 
-local function AngryAssign_RestorePage(widget, event, value)
-	if not AngryAssign.window then return end
-	local page = AngryAssign_Pages[AngryAssign:SelectedId()]
+local function AngrySparks_RestorePage(widget, event, value)
+	if not AngrySparks.window then return end
+	local page = AngrySparks_Pages[AngrySparks:SelectedId()]
 	if not page or not page.Backup then return end
 
-	AngryAssign.window.text:SetText( page.Backup )
-	AngryAssign.window.text.button:Enable()
-	AngryAssign_TextChanged(widget, event, value)
+	AngrySparks.window.text:SetText(page.Backup)
+	AngrySparks.window.text.button:Enable()
+	AngrySparks_TextChanged(widget, event, value)
 end
 
-local function AngryAssign_CategoryMenuList(entryId, parentId)
+local function AngrySparks_CategoryMenuList(entryId, parentId)
 	local categories = {}
 
 	local checkedId
 	if entryId > 0 then
-		local page = AngryAssign_Pages[entryId]
+		local page = AngrySparks_Pages[entryId]
 		checkedId = page.CategoryId
 	else
-		local cat = AngryAssign_Categories[-entryId]
+		local cat = AngrySparks_Categories[-entryId]
 		checkedId = cat.CategoryId
 	end
 
-	for _, cat in pairs(AngryAssign_Categories) do
+	for _, cat in pairs(AngrySparks_Categories) do
 		if cat.Id ~= -entryId and (parentId or not cat.CategoryId) and (not parentId or cat.CategoryId == parentId) then
-			local subMenu = AngryAssign_CategoryMenuList(entryId, cat.Id)
-			table.insert(categories, { text = cat.Name, value = cat.Id, menuList = subMenu, hasArrow = (subMenu ~= nil), checked = (checkedId == cat.Id), func = AngryAssign_AssignCategory, arg1 = entryId, arg2 = cat.Id })
+			local subMenu = AngrySparks_CategoryMenuList(entryId, cat.Id)
+			table.insert(categories,
+				{
+					text = cat.Name,
+					value = cat.Id,
+					menuList = subMenu,
+					hasArrow = (subMenu ~= nil),
+					checked = (checkedId == cat.Id),
+					func =
+						AngrySparks_AssignCategory,
+					arg1 = entryId,
+					arg2 = cat.Id
+				})
 		end
 	end
 
-	table.sort(categories, function(a,b) return a.text < b.text end)
+	table.sort(categories, function(a, b) return a.text < b.text end)
 
 	if #categories > 0 then
 		return categories
@@ -828,20 +883,20 @@ local function AngryAssign_CategoryMenuList(entryId, parentId)
 end
 
 local PagesDropDownList
-function AngryAssign_PageMenu(pageId)
-	local page = AngryAssign_Pages[pageId]
+function AngrySparks_PageMenu(pageId)
+	local page = AngrySparks_Pages[pageId]
 	if not page then return end
 
 	if not PagesDropDownList then
 		PagesDropDownList = {
 			{ notCheckable = true, isTitle = true },
-			{ text = "Rename", notCheckable = true, func = function(frame, pageId) AngryAssign_RenamePage(pageId) end },
-			{ text = "Delete", notCheckable = true, func = function(frame, pageId) AngryAssign_DeletePage(pageId) end },
-			{ text = "Category", notCheckable = true, hasArrow = true },
+			{ text = "Rename",     notCheckable = true, func = function(frame, pageId) AngrySparks_RenamePage(pageId) end },
+			{ text = "Delete",     notCheckable = true, func = function(frame, pageId) AngrySparks_DeletePage(pageId) end },
+			{ text = "Category",   notCheckable = true, hasArrow = true },
 		}
 	end
 
-	local permission = AngryAssign:PermissionCheck()
+	local permission = AngrySparks:PermissionCheck()
 
 	PagesDropDownList[1].text = page.Name
 	PagesDropDownList[2].arg1 = pageId
@@ -849,7 +904,7 @@ function AngryAssign_PageMenu(pageId)
 	PagesDropDownList[3].arg1 = pageId
 	PagesDropDownList[3].disabled = not permission
 
-	local categories = AngryAssign_CategoryMenuList(pageId)
+	local categories = AngrySparks_CategoryMenuList(pageId)
 	if categories ~= nil then
 		PagesDropDownList[4].menuList = categories
 		PagesDropDownList[4].disabled = false
@@ -862,16 +917,16 @@ function AngryAssign_PageMenu(pageId)
 end
 
 local CategoriesDropDownList
-local function AngryAssign_CategoryMenu(catId)
-	local cat = AngryAssign_Categories[catId]
+local function AngrySparks_CategoryMenu(catId)
+	local cat = AngrySparks_Categories[catId]
 	if not cat then return end
 
 	if not CategoriesDropDownList then
 		CategoriesDropDownList = {
 			{ notCheckable = true, isTitle = true },
-			{ text = "Rename", notCheckable = true, func = function(frame, pageId) AngryAssign_RenameCategory(pageId) end },
-			{ text = "Delete", notCheckable = true, func = function(frame, pageId) AngryAssign_DeleteCategory(pageId) end },
-			{ text = "Category", notCheckable = true, hasArrow = true },
+			{ text = "Rename",     notCheckable = true, func = function(frame, pageId) AngrySparks_RenameCategory(pageId) end },
+			{ text = "Delete",     notCheckable = true, func = function(frame, pageId) AngrySparks_DeleteCategory(pageId) end },
+			{ text = "Category",   notCheckable = true, hasArrow = true },
 		}
 	end
 	CategoriesDropDownList[1].text = cat.Name
@@ -879,7 +934,7 @@ local function AngryAssign_CategoryMenu(catId)
 	CategoriesDropDownList[3].arg1 = catId
 
 
-	local categories = AngryAssign_CategoryMenuList(-catId)
+	local categories = AngrySparks_CategoryMenuList(-catId)
 	if categories ~= nil then
 		CategoriesDropDownList[4].menuList = categories
 		CategoriesDropDownList[4].disabled = false
@@ -891,17 +946,16 @@ local function AngryAssign_CategoryMenu(catId)
 	return CategoriesDropDownList
 end
 
-local AngryAssign_DropDown
-local function AngryAssign_TreeClick(widget, event, value, selected, button)
+local AngrySparks_DropDown
+local function AngrySparks_TreeClick(widget, event, value, selected, button)
 	HideDropDownMenu(1)
 	local selectedId = selectedLastValue(value)
 	if selectedId < 0 then
 		if button == "RightButton" then
-			if not AngryAssign_DropDown then
-				AngryAssign_DropDown = CreateFrame("Frame", "AngryAssignMenuFrame", UIParent, "UIDropDownMenuTemplate")
+			if not AngrySparks_DropDown then
+				AngrySparks_DropDown = CreateFrame("Frame", "AngrySparksMenuFrame", UIParent, "UIDropDownMenuTemplate")
 			end
-			EasyMenu(AngryAssign_CategoryMenu(-selectedId), AngryAssign_DropDown, "cursor", 0 , 0, "MENU")
-
+			EasyMenu(AngrySparks_CategoryMenu(-selectedId), AngrySparks_DropDown, "cursor", 0, 0, "MENU")
 		else
 			local status = (widget.status or widget.localstatus).groups
 			status[value] = not status[value]
@@ -910,42 +964,42 @@ local function AngryAssign_TreeClick(widget, event, value, selected, button)
 		return false
 	else
 		if button == "RightButton" then
-			if not AngryAssign_DropDown then
-				AngryAssign_DropDown = CreateFrame("Frame", "AngryAssignMenuFrame", UIParent, "UIDropDownMenuTemplate")
+			if not AngrySparks_DropDown then
+				AngrySparks_DropDown = CreateFrame("Frame", "AngrySparksMenuFrame", UIParent, "UIDropDownMenuTemplate")
 			end
-			EasyMenu(AngryAssign_PageMenu(selectedId), AngryAssign_DropDown, "cursor", 0 , 0, "MENU")
+			EasyMenu(AngrySparks_PageMenu(selectedId), AngrySparks_DropDown, "cursor", 0, 0, "MENU")
 
 			return false
 		end
 	end
 end
 
-function AngryAssign:CreateWindow()
+function AngrySparks:CreateWindow()
 	local window = AceGUI:Create("Frame")
 	window:SetTitle("Angry Girls")
 	window:SetStatusText("")
 	window:SetLayout("Flow")
-	if AngryAssign:GetConfig('scale') then window.frame:SetScale( AngryAssign:GetConfig('scale') ) end
-	window:SetStatusTable(AngryAssign_State.window)
+	if AngrySparks:GetConfig('scale') then window.frame:SetScale(AngrySparks:GetConfig('scale')) end
+	window:SetStatusTable(AngrySparks_State.window)
 	window:Hide()
-	AngryAssign.window = window
+	AngrySparks.window = window
 
-	AngryAssign_Window = window.frame
+	AngrySparks_Window = window.frame
 	window.frame:SetMinResize(750, 400)
 	window.frame:SetFrameStrata("HIGH")
 	window.frame:SetFrameLevel(1)
 	window.frame:SetClampedToScreen(true)
-	tinsert(UISpecialFrames, "AngryAssign_Window")
+	tinsert(UISpecialFrames, "AngrySparks_Window")
 
 	local tree = AceGUI:Create("AngryTreeGroup")
-	tree:SetTree( self:GetTree() )
+	tree:SetTree(self:GetTree())
 	tree:SelectByValue(1)
-	tree:SetStatusTable(AngryAssign_State.tree)
+	tree:SetStatusTable(AngrySparks_State.tree)
 	tree:SetFullWidth(true)
 	tree:SetFullHeight(true)
 	tree:SetLayout("Flow")
-	tree:SetCallback("OnGroupSelected", function(widget, event, value) AngryAssign:UpdateSelected(true) end)
-	tree:SetCallback("OnClick", AngryAssign_TreeClick)
+	tree:SetCallback("OnGroupSelected", function(widget, event, value) AngrySparks:UpdateSelected(true) end)
+	tree:SetCallback("OnClick", AngrySparks_TreeClick)
 	window:AddChild(tree)
 	window.tree = tree
 
@@ -953,8 +1007,8 @@ function AngryAssign:CreateWindow()
 	text:SetLabel(nil)
 	text:SetFullWidth(true)
 	text:SetFullHeight(true)
-	text:SetCallback("OnTextChanged", AngryAssign_TextChanged)
-	text:SetCallback("OnEnterPressed", AngryAssign_TextEntered)
+	text:SetCallback("OnTextChanged", AngrySparks_TextChanged)
+	text:SetCallback("OnEnterPressed", AngrySparks_TextEntered)
 	tree:AddChild(text)
 	window.text = text
 	text.button:SetWidth(75)
@@ -970,11 +1024,11 @@ function AngryAssign:CreateWindow()
 	button_display:SetHeight(22)
 	button_display:ClearAllPoints()
 	button_display:SetPoint("BOTTOMRIGHT", text.frame, "BOTTOMRIGHT", 0, 4)
-	button_display:SetCallback("OnClick", function ()
-		AngryAssign_DisplayPage()
+	button_display:SetCallback("OnClick", function()
+		AngrySparks_DisplayPage()
 		button_display:SetDisabled(true)
 		button_display:SetText("Sending...")
-		self:ScheduleTimer(function ()
+		self:ScheduleTimer(function()
 			button_display:SetDisabled(false)
 			button_display:SetText("Send and Display")
 		end, updateThrottle)
@@ -989,7 +1043,7 @@ function AngryAssign:CreateWindow()
 	button_revert:ClearAllPoints()
 	button_revert:SetDisabled(true)
 	button_revert:SetPoint("BOTTOMLEFT", text.button, "BOTTOMRIGHT", 6, 0)
-	button_revert:SetCallback("OnClick", AngryAssign_RevertPage)
+	button_revert:SetCallback("OnClick", AngrySparks_RevertPage)
 	tree:AddChild(button_revert)
 	window.button_revert = button_revert
 
@@ -999,7 +1053,7 @@ function AngryAssign:CreateWindow()
 	button_restore:SetHeight(22)
 	button_restore:ClearAllPoints()
 	button_restore:SetPoint("LEFT", button_revert.frame, "RIGHT", 6, 0)
-	button_restore:SetCallback("OnClick", AngryAssign_RestorePage)
+	button_restore:SetCallback("OnClick", AngrySparks_RestorePage)
 	tree:AddChild(button_restore)
 	window.button_restore = button_restore
 
@@ -1009,7 +1063,7 @@ function AngryAssign:CreateWindow()
 	button_output:SetHeight(22)
 	button_output:ClearAllPoints()
 	button_output:SetPoint("BOTTOMLEFT", button_restore.frame, "BOTTOMRIGHT", 6, 0)
-	button_output:SetCallback("OnClick", AngryAssign_OutputDisplayed)
+	button_output:SetCallback("OnClick", AngrySparks_OutputDisplayed)
 	tree:AddChild(button_output)
 	window.button_output = button_output
 
@@ -1020,7 +1074,7 @@ function AngryAssign:CreateWindow()
 	button_add:SetHeight(19)
 	button_add:ClearAllPoints()
 	button_add:SetPoint("BOTTOMLEFT", window.frame, "BOTTOMLEFT", 17, 18)
-	button_add:SetCallback("OnClick", AngryAssign_AddPage)
+	button_add:SetCallback("OnClick", AngrySparks_AddPage)
 	window:AddChild(button_add)
 	window.button_add = button_add
 
@@ -1030,7 +1084,7 @@ function AngryAssign:CreateWindow()
 	button_rename:SetHeight(19)
 	button_rename:ClearAllPoints()
 	button_rename:SetPoint("BOTTOMLEFT", button_add.frame, "BOTTOMRIGHT", 5, 0)
-	button_rename:SetCallback("OnClick", function() AngryAssign_RenamePage() end)
+	button_rename:SetCallback("OnClick", function() AngrySparks_RenamePage() end)
 	window:AddChild(button_rename)
 	window.button_rename = button_rename
 
@@ -1040,7 +1094,7 @@ function AngryAssign:CreateWindow()
 	button_delete:SetHeight(19)
 	button_delete:ClearAllPoints()
 	button_delete:SetPoint("BOTTOMLEFT", button_rename.frame, "BOTTOMRIGHT", 5, 0)
-	button_delete:SetCallback("OnClick", function() AngryAssign_DeletePage() end)
+	button_delete:SetCallback("OnClick", function() AngrySparks_DeletePage() end)
 	window:AddChild(button_delete)
 	window.button_delete = button_delete
 
@@ -1050,7 +1104,7 @@ function AngryAssign:CreateWindow()
 	button_add_cat:SetHeight(19)
 	button_add_cat:ClearAllPoints()
 	button_add_cat:SetPoint("BOTTOMLEFT", button_delete.frame, "BOTTOMRIGHT", 5, 0)
-	button_add_cat:SetCallback("OnClick", function() AngryAssign_AddCategory() end)
+	button_add_cat:SetCallback("OnClick", function() AngrySparks_AddCategory() end)
 	window:AddChild(button_add_cat)
 	window.button_add_cat = button_add_cat
 
@@ -1060,7 +1114,7 @@ function AngryAssign:CreateWindow()
 	button_variables:SetHeight(19)
 	button_variables:ClearAllPoints()
 	button_variables:SetPoint("BOTTOMLEFT", button_add_cat.frame, "BOTTOMRIGHT", 5, 0)
-	button_variables:SetCallback("OnClick", function() AngryAssign:ToggleVariablesDisplay() end)
+	button_variables:SetCallback("OnClick", function() AngrySparks:ToggleVariablesDisplay() end)
 	window:AddChild(button_variables)
 	window.button_variables = button_variables
 
@@ -1070,7 +1124,7 @@ function AngryAssign:CreateWindow()
 	button_clear:SetHeight(19)
 	button_clear:ClearAllPoints()
 	button_clear:SetPoint("BOTTOMRIGHT", window.frame, "BOTTOMRIGHT", -135, 18)
-	button_clear:SetCallback("OnClick", AngryAssign_ClearPage)
+	button_clear:SetCallback("OnClick", AngrySparks_ClearPage)
 	window:AddChild(button_clear)
 	window.button_clear = button_clear
 
@@ -1080,7 +1134,7 @@ function AngryAssign:CreateWindow()
 	self:CreateVariablesWindow()
 end
 
-function AngryAssign:CreateVariablesWindow()
+function AngrySparks:CreateVariablesWindow()
 	local window = AceGUI:Create("Frame")
 	window:Hide()
 
@@ -1091,15 +1145,16 @@ function AngryAssign:CreateVariablesWindow()
 	window.frame:SetFrameStrata("HIGH")
 	window.frame:SetFrameLevel(1)
 	window.frame:SetClampedToScreen(true)
-	if AngryAssign:GetConfig('scale') then window.frame:SetScale( AngryAssign:GetConfig('scale') ) end
+	if AngrySparks:GetConfig('scale') then window.frame:SetScale(AngrySparks:GetConfig('scale')) end
 
-	AngryAssign.variablesWindow = window
+	AngrySparks.variablesWindow = window
 
-	AngryAssign_VariablesWindow = window.frame
-	tinsert(UISpecialFrames, "AngryAssign_VariablesWindow")
+	AngrySparks_VariablesWindow = window.frame
+	tinsert(UISpecialFrames, "AngrySparks_VariablesWindow")
 
 	local helpLabel = AceGUI:Create("Label")
-	helpLabel:SetText("Enter a string and what that string should be replaced with, one per line. Press Accept to update the variables and re-publish the currently selected page.")
+	helpLabel:SetText(
+		"Enter a string and what that string should be replaced with, one per line. Press Accept to update the variables and re-publish the currently selected page.")
 	helpLabel:SetWidth(500)
 	window:AddChild(helpLabel)
 
@@ -1107,15 +1162,15 @@ function AngryAssign:CreateVariablesWindow()
 	text:SetLabel(nil)
 	text:SetFullWidth(true)
 	text:SetFullHeight(true)
-	text:SetText(AngryAssign:VariablesToString())
+	text:SetText(AngrySparks:VariablesToString())
 
 	text:SetCallback("OnEnterPressed", function()
-		AngryAssign:SaveVariables(text:GetText())
-		local id = AngryAssign:SelectedId()
+		AngrySparks:SaveVariables(text:GetText())
+		local id = AngrySparks:SelectedId()
 		if id then
 			self:RehashPage(id)
-			AngryAssign:DisplayPage(id)
-			if AngryAssign_State.displayed == id then
+			AngrySparks:DisplayPage(id)
+			if AngrySparks_State.displayed == id then
 				self:UpdateDisplayed()
 			end
 		end
@@ -1123,10 +1178,10 @@ function AngryAssign:CreateVariablesWindow()
 
 	window:AddChild(text)
 
-	window:SetCallback("OnShow", function() text:SetText(AngryAssign:VariablesToString()) end)
+	window:SetCallback("OnShow", function() text:SetText(AngrySparks:VariablesToString()) end)
 end
 
-function AngryAssign:ToggleVariablesDisplay()
+function AngrySparks:ToggleVariablesDisplay()
 	if self.variablesWindow:IsVisible() then
 		self.variablesWindow:Hide()
 	else
@@ -1134,24 +1189,24 @@ function AngryAssign:ToggleVariablesDisplay()
 	end
 end
 
-function AngryAssign:SaveVariables(text)
+function AngrySparks:SaveVariables(text)
 	local tmp = {}
 
-	for _,v in ipairs({ strsplit("\n", text) }) do
+	for _, v in ipairs({ strsplit("\n", text) }) do
 		if v:trim() ~= "" then
 			local var, str = string.match(v, "(%w+)%s+(.+)")
 			if var and var:trim() ~= "" and str and str:trim() ~= "" then
-				tinsert(tmp, {var, str})
+				tinsert(tmp, { var, str })
 			end
 		end
 	end
 
-	AngryAssign_Variables = tmp
+	AngrySparks_Variables = tmp
 end
 
-function AngryAssign:VariablesToString()
+function AngrySparks:VariablesToString()
 	local s = ""
-	for _,v in ipairs(AngryAssign_Variables) do
+	for _, v in ipairs(AngrySparks_Variables) do
 		if v[1] and v[2] then
 			s = s .. v[1] .. " " .. v[2] .. "\n"
 		end
@@ -1159,9 +1214,9 @@ function AngryAssign:VariablesToString()
 	return s
 end
 
-function AngryAssign:SelectedUpdated(sender)
+function AngrySparks:SelectedUpdated(sender)
 	if self.window and self.window.text.button:IsEnabled() then
-		local popup_name = "AngryAssign_PageUpdated"
+		local popup_name = "AngrySparks_PageUpdated"
 		if StaticPopupDialogs[popup_name] == nil then
 			StaticPopupDialogs[popup_name] = {
 				button1 = OKAY,
@@ -1171,7 +1226,8 @@ function AngryAssign:SelectedUpdated(sender)
 				preferredIndex = 3
 			}
 		end
-		StaticPopupDialogs[popup_name].text = "The page you are editing has been updated by "..sender..".\n\nYou can view this update by reverting your changes."
+		StaticPopupDialogs[popup_name].text = "The page you are editing has been updated by " ..
+			sender .. ".\n\nYou can view this update by reverting your changes."
 		StaticPopup_Show(popup_name)
 		return true
 	else
@@ -1180,7 +1236,7 @@ function AngryAssign:SelectedUpdated(sender)
 end
 
 local function GetTree_InsertPage(tree, page)
-	if page.Id == AngryAssign_State.displayed then
+	if page.Id == AngrySparks_State.displayed then
 		table.insert(tree, { value = page.Id, text = page.Name, icon = "Interface\\BUTTONS\\UI-GuildButton-MOTD-Up" })
 	else
 		table.insert(tree, { value = page.Id, text = page.Name })
@@ -1189,59 +1245,61 @@ end
 
 local function GetTree_InsertChildren(categoryId, displayedPages)
 	local tree = {}
-	for _, cat in pairs(AngryAssign_Categories) do
+	for _, cat in pairs(AngrySparks_Categories) do
 		if cat.CategoryId == categoryId then
-			table.insert(tree, { value = -cat.Id, text = cat.Name, children = GetTree_InsertChildren(cat.Id, displayedPages) })
+			table.insert(tree,
+				{ value = -cat.Id, text = cat.Name, children = GetTree_InsertChildren(cat.Id, displayedPages) })
 		end
 	end
 
-	for _, page in pairs(AngryAssign_Pages) do
+	for _, page in pairs(AngrySparks_Pages) do
 		if page.CategoryId == categoryId then
 			displayedPages[page.Id] = true
 			GetTree_InsertPage(tree, page)
 		end
 	end
 
-	table.sort(tree, function(a,b) return a.text < b.text end)
+	table.sort(tree, function(a, b) return a.text < b.text end)
 	return tree
 end
 
-function AngryAssign:GetTree()
+function AngrySparks:GetTree()
 	local tree = {}
 	local displayedPages = {}
 
-	for _, cat in pairs(AngryAssign_Categories) do
+	for _, cat in pairs(AngrySparks_Categories) do
 		if not cat.CategoryId then
-			table.insert(tree, { value = -cat.Id, text = cat.Name, children = GetTree_InsertChildren(cat.Id, displayedPages) })
+			table.insert(tree,
+				{ value = -cat.Id, text = cat.Name, children = GetTree_InsertChildren(cat.Id, displayedPages) })
 		end
 	end
 
-	for _, page in pairs(AngryAssign_Pages) do
+	for _, page in pairs(AngrySparks_Pages) do
 		if not page.CategoryId or not displayedPages[page.Id] then
 			GetTree_InsertPage(tree, page)
 		end
 	end
 
-	table.sort(tree, function(a,b) return a.text < b.text end)
+	table.sort(tree, function(a, b) return a.text < b.text end)
 
 	return tree
 end
 
-function AngryAssign:UpdateTree(id)
+function AngrySparks:UpdateTree(id)
 	if not self.window then return end
-	self.window.tree:SetTree( self:GetTree() )
+	self.window.tree:SetTree(self:GetTree())
 	if id then
-		self:SetSelectedId( id )
+		self:SetSelectedId(id)
 	end
 end
 
-function AngryAssign:UpdateSelected(destructive)
+function AngrySparks:UpdateSelected(destructive)
 	if not self.window then return end
-	local page = AngryAssign_Pages[ self:SelectedId() ]
+	local page = AngrySparks_Pages[self:SelectedId()]
 	local permission = self:PermissionCheck()
 	if destructive or not self.window.text.button:IsEnabled() then
 		if page then
-			self.window.text:SetText( page.Contents )
+			self.window.text:SetText(page.Contents)
 		else
 			self.window.text:SetText("")
 		end
@@ -1282,20 +1340,20 @@ end
 -- Performing changes functions --
 ----------------------------------
 
-function AngryAssign:SelectedId()
-	return selectedLastValue( AngryAssign_State.tree.selected )
+function AngrySparks:SelectedId()
+	return selectedLastValue(AngrySparks_State.tree.selected)
 end
 
-function AngryAssign:SetSelectedId(selectedId)
-	local page = AngryAssign_Pages[selectedId]
+function AngrySparks:SetSelectedId(selectedId)
+	local page = AngrySparks_Pages[selectedId]
 	if page then
 		if page.CategoryId then
-			local cat = AngryAssign_Categories[page.CategoryId]
-			local path = { }
+			local cat = AngrySparks_Categories[page.CategoryId]
+			local path = {}
 			while cat do
 				table.insert(path, -cat.Id)
 				if cat.CategoryId then
-					cat = AngryAssign_Categories[cat.CategoryId]
+					cat = AngrySparks_Categories[cat.CategoryId]
 				else
 					cat = nil
 				end
@@ -1311,16 +1369,16 @@ function AngryAssign:SetSelectedId(selectedId)
 	end
 end
 
-function AngryAssign:Get(id)
+function AngrySparks:Get(id)
 	if id == nil then id = self:SelectedId() end
-	return AngryAssign_Pages[id]
+	return AngrySparks_Pages[id]
 end
 
-function AngryAssign:GetCat(id)
-	return AngryAssign_Categories[id]
+function AngrySparks:GetCat(id)
+	return AngrySparks_Categories[id]
 end
 
-function AngryAssign:Hash(name, contents, variables)
+function AngrySparks:Hash(name, contents, variables)
 	local code = libC:fcs32init()
 	code = libC:fcs32update(code, name)
 	code = libC:fcs32update(code, "\n")
@@ -1332,16 +1390,23 @@ function AngryAssign:Hash(name, contents, variables)
 	return libC:fcs32final(code)
 end
 
-function AngryAssign:CreatePage(name)
+function AngrySparks:CreatePage(name)
 	if not self:PermissionCheck() then return end
 	local id = self:Hash("page", math.random(2000000000))
 
-	AngryAssign_Pages[id] = { Id = id, Updated = time(), UpdateId = self:Hash(name, "", AngryAssign:VariablesToString()), Name = name, Contents = "" }
+	AngrySparks_Pages[id] = {
+		Id = id,
+		Updated = time(),
+		UpdateId = self:Hash(name, "", AngrySparks:VariablesToString()),
+		Name =
+			name,
+		Contents = ""
+	}
 	self:UpdateTree(id)
 	self:SendPage(id, true)
 end
 
-function AngryAssign:RenamePage(id, name)
+function AngrySparks:RenamePage(id, name)
 	local page = self:Get(id)
 	if not page or not self:PermissionCheck() then return end
 
@@ -1351,25 +1416,25 @@ function AngryAssign:RenamePage(id, name)
 
 	self:SendPage(id, true)
 	self:UpdateTree()
-	if AngryAssign_State.displayed == id then
+	if AngrySparks_State.displayed == id then
 		self:UpdateDisplayed()
 		self:ShowDisplay()
 	end
 end
 
-function AngryAssign:DeletePage(id)
-	AngryAssign_Pages[id] = nil
+function AngrySparks:DeletePage(id)
+	AngrySparks_Pages[id] = nil
 	if self.window and self:SelectedId() == id then
 		self:SetSelectedId(nil)
 		self:UpdateSelected(true)
 	end
-	if AngryAssign_State.displayed == id then
+	if AngrySparks_State.displayed == id then
 		self:ClearDisplayed()
 	end
 	self:UpdateTree()
 end
 
-function AngryAssign:TouchPage(id)
+function AngrySparks:TouchPage(id)
 	if not self:PermissionCheck() then return end
 	local page = self:Get(id)
 	if not page then return end
@@ -1377,24 +1442,24 @@ function AngryAssign:TouchPage(id)
 	page.Updated = time()
 end
 
-function AngryAssign:RehashPage(id)
+function AngrySparks:RehashPage(id)
 	local page = self:Get(id)
 	if not page then return end
-	page.UpdateId = self:Hash(page.Name, page.Contents, AngryAssign:VariablesToString())
+	page.UpdateId = self:Hash(page.Name, page.Contents, AngrySparks:VariablesToString())
 end
 
-function AngryAssign:CreateCategory(name)
+function AngrySparks:CreateCategory(name)
 	local id = self:Hash("cat", math.random(2000000000))
 
-	AngryAssign_Categories[id] = { Id = id, Name = name }
+	AngrySparks_Categories[id] = { Id = id, Name = name }
 
-	if AngryAssign_State.tree.groups then
-		AngryAssign_State.tree.groups[ -id ] = true
+	if AngrySparks_State.tree.groups then
+		AngrySparks_State.tree.groups[-id] = true
 	end
 	self:UpdateTree()
 end
 
-function AngryAssign:RenameCategory(id, name)
+function AngrySparks:RenameCategory(id, name)
 	local cat = self:GetCat(id)
 	if not cat then return end
 
@@ -1403,31 +1468,31 @@ function AngryAssign:RenameCategory(id, name)
 	self:UpdateTree()
 end
 
-function AngryAssign:DeleteCategory(id)
+function AngrySparks:DeleteCategory(id)
 	local cat = self:GetCat(id)
 	if not cat then return end
 
 	local selectedId = self:SelectedId()
 
-	for _, c in pairs(AngryAssign_Categories) do
+	for _, c in pairs(AngrySparks_Categories) do
 		if cat.Id == c.CategoryId then
 			c.CategoryId = cat.CategoryId
 		end
 	end
 
-	for _, p in pairs(AngryAssign_Pages) do
+	for _, p in pairs(AngrySparks_Pages) do
 		if cat.Id == p.CategoryId then
 			p.CategoryId = cat.CategoryId
 		end
 	end
 
-	AngryAssign_Categories[id] = nil
+	AngrySparks_Categories[id] = nil
 
 	self:UpdateTree()
 	self:SetSelectedId(selectedId)
 end
 
-function AngryAssign:AssignCategory(entryId, parentId)
+function AngrySparks:AssignCategory(entryId, parentId)
 	local page, cat
 	if entryId > 0 then
 		page = self:Get(entryId)
@@ -1456,11 +1521,11 @@ function AngryAssign:AssignCategory(entryId, parentId)
 	local selectedId = self:SelectedId()
 	self:UpdateTree()
 	if selectedId == entryId then
-		self:SetSelectedId( selectedId )
+		self:SetSelectedId(selectedId)
 	end
 end
 
-function AngryAssign:UpdateContents(id, value)
+function AngrySparks:UpdateContents(id, value)
 	if not self:PermissionCheck() then return end
 	local page = self:Get(id)
 	if not page then return end
@@ -1474,37 +1539,39 @@ function AngryAssign:UpdateContents(id, value)
 
 	self:SendPage(id, true)
 	self:UpdateSelected(true)
-	if AngryAssign_State.displayed == id then
+	if AngrySparks_State.displayed == id then
 		self:UpdateDisplayed()
 		self:ShowDisplay()
 		if contents_updated then self:DisplayUpdateNotification() end
 	end
 end
 
-function AngryAssign:CreateBackup()
-	for _, page in pairs(AngryAssign_Pages) do
+function AngrySparks:CreateBackup()
+	for _, page in pairs(AngrySparks_Pages) do
 		page.Backup = page.Contents
 	end
 	self:UpdateSelected()
 end
-function AngryAssign:ClearDisplayed()
-	AngryAssign_State.displayed = nil
+
+function AngrySparks:ClearDisplayed()
+	AngrySparks_State.displayed = nil
 	self:UpdateDisplayed()
 	self:UpdateTree()
 end
 
-function AngryAssign:IsPlayerRaidLeader()
+function AngrySparks:IsPlayerRaidLeader()
 	local leader = self:GetRaidLeader()
 	return leader and PlayerFullName() == EnsureUnitFullName(leader)
 end
 
-function AngryAssign:IsGuildRaid()
+function AngrySparks:IsGuildRaid()
 	if IsInRaid() then
 		local leader = self:GetRaidLeader()
 
 		local totalMembers, _, numOnlineAndMobileMembers = GetNumGuildMembers()
-		local scanTotal = GetGuildRosterShowOffline() and totalMembers or numOnlineAndMobileMembers--Attempt CPU saving, if "show offline" is unchecked, we can reliably scan only online members instead of whole roster
-		for i=1, scanTotal do
+		local scanTotal = GetGuildRosterShowOffline() and totalMembers or
+			numOnlineAndMobileMembers --Attempt CPU saving, if "show offline" is unchecked, we can reliably scan only online members instead of whole roster
+		for i = 1, scanTotal do
 			local name = GetGuildRosterInfo(i)
 			if not name then break end
 			name = EnsureUnitFullName(name)
@@ -1517,13 +1584,12 @@ function AngryAssign:IsGuildRaid()
 	return false
 end
 
-
-function AngryAssign:IsValidRaid()
+function AngrySparks:IsValidRaid()
 	if self:GetConfig('allowall') then
 		return true
 	end
 
-	for token in string.gmatch( AngryAssign:GetConfig('allowplayers') , "[^%s!#$%%&()*+,./:;<=>?@\\^_{|}~%[%]]+") do
+	for token in string.gmatch(AngrySparks:GetConfig('allowplayers'), "[^%s!#$%%&()*+,./:;<=>?@\\^_{|}~%[%]]+") do
 		if leader and EnsureUnitFullName(token):lower() == EnsureUnitFullName(leader):lower() then
 			return true
 		end
@@ -1540,18 +1606,18 @@ function AngryAssign:IsValidRaid()
 	return false
 end
 
-function AngryAssign:PermissionCheck(sender)
+function AngrySparks:PermissionCheck(sender)
 	if not sender then sender = PlayerFullName() end
 
 	if (IsInRaid() or IsInGroup()) then
-		return (UnitIsGroupLeader(EnsureUnitShortName(sender)) == true or UnitIsGroupAssistant(EnsureUnitShortName(sender)) == true) and self:IsValidRaid()
+		return (UnitIsGroupLeader(EnsureUnitShortName(sender)) == true or UnitIsGroupAssistant(EnsureUnitShortName(sender)) == true) and
+			self:IsValidRaid()
 	else
 		return sender == PlayerFullName()
 	end
 end
 
-
-function AngryAssign:PermissionsUpdated()
+function AngrySparks:PermissionsUpdated()
 	self:UpdateSelected()
 	if comStarted then
 		self:SendRequestDisplay()
@@ -1569,9 +1635,9 @@ local function DragHandle_MouseDown(frame) frame:GetParent():GetParent():StartSi
 local function DragHandle_MouseUp(frame)
 	local display = frame:GetParent():GetParent()
 	display:StopMovingOrSizing()
-	AngryAssign_State.display.width = display:GetWidth()
+	AngrySparks_State.display.width = display:GetWidth()
 	lwin.SavePosition(display)
-	AngryAssign:SyncTextSizeFrames()
+	AngrySparks:SyncTextSizeFrames()
 end
 local function Mover_MouseDown(frame) frame:GetParent():StartMoving() end
 local function Mover_MouseUp(frame)
@@ -1580,45 +1646,45 @@ local function Mover_MouseUp(frame)
 	lwin.SavePosition(display)
 end
 
-function AngryAssign:ResetPosition()
-	AngryAssign_State.display = {}
-	AngryAssign_State.directionUp = false
-	AngryAssign_State.locked = false
+function AngrySparks:ResetPosition()
+	AngrySparks_State.display = {}
+	AngrySparks_State.directionUp = false
+	AngrySparks_State.locked = false
 
 	self.display_text:Show()
 	self.mover:Show()
 	self.frame:SetWidth(300)
 
-	lwin.RegisterConfig(self.frame, AngryAssign_State.display)
+	lwin.RegisterConfig(self.frame, AngrySparks_State.display)
 	lwin.RestorePosition(self.frame)
 
 	self:UpdateDirection()
 end
 
-function AngryAssign_ToggleDisplay()
-	AngryAssign:ToggleDisplay()
+function AngrySparks_ToggleDisplay()
+	AngrySparks:ToggleDisplay()
 end
 
-function AngryAssign_ShowDisplay()
-	AngryAssign:ShowDisplay()
+function AngrySparks_ShowDisplay()
+	AngrySparks:ShowDisplay()
 end
 
-function AngryAssign_HideDisplay()
-	AngryAssign:HideDisplay()
+function AngrySparks_HideDisplay()
+	AngrySparks:HideDisplay()
 end
 
-function AngryAssign:ShowDisplay()
+function AngrySparks:ShowDisplay()
 	self.display_text:Show()
 	self:SyncTextSizeFrames()
-	AngryAssign_State.display.hidden = false
+	AngrySparks_State.display.hidden = false
 end
 
-function AngryAssign:HideDisplay()
+function AngrySparks:HideDisplay()
 	self.display_text:Hide()
-	AngryAssign_State.display.hidden = true
+	AngrySparks_State.display.hidden = true
 end
 
-function AngryAssign:ToggleDisplay()
+function AngrySparks:ToggleDisplay()
 	if self.display_text:IsShown() then
 		self:HideDisplay()
 	else
@@ -1626,29 +1692,33 @@ function AngryAssign:ToggleDisplay()
 	end
 end
 
-function AngryAssign:Paginate(direction)
+function AngrySparks:Paginate(direction)
 	if direction == "forward" then
-		AngryAssign_State.currentPage = AngryAssign_State.currentPage + 1
+		AngrySparks_State.currentPage = AngrySparks_State.currentPage + 1
 	else
-		AngryAssign_State.currentPage = AngryAssign_State.currentPage - 1
+		AngrySparks_State.currentPage = AngrySparks_State.currentPage - 1
 	end
 	self:UpdateDisplayed()
 end
 
-function AngryAssign:CreateDisplay()
+function AngrySparks:CreateDisplay()
 	local frame = CreateFrame("Frame", "AngryAss", UIParent)
-	frame:SetPoint("CENTER",0,0)
-	frame:SetWidth(AngryAssign_State.display.width or 300)
+	frame:SetPoint("CENTER", 0, 0)
+	frame:SetWidth(AngrySparks_State.display.width or 300)
 	frame:SetHeight(1)
 	frame:SetMovable(true)
 	frame:SetResizable(true)
 	frame:SetClampedToScreen(true)
-	frame:SetMinResize(180,1)
-	frame:SetMaxResize(830,1)
+	if frame.SetResizeBounds then
+		frame:SetResizeBounds(180, 1, 830, 1)
+	else
+		frame:SetMinResize(180, 1)
+		frame:SetMaxResize(830, 1)
+	end
 	frame:SetFrameStrata("MEDIUM")
 	self.frame = frame
 
-	lwin.RegisterConfig(frame, AngryAssign_State.display)
+	lwin.RegisterConfig(frame, AngrySparks_State.display)
 	lwin.RestorePosition(frame)
 
 	local text = CreateFrame("ScrollingMessageFrame", "AngryAssScrollingMessage", frame)
@@ -1666,14 +1736,14 @@ function AngryAssign:CreateDisplay()
 
 	local clickOverlay = CreateFrame("Frame", "AngryAssClickOverlay", text)
 	clickOverlay:SetAllPoints(text)
-	clickOverlay:SetScript("OnMouseDown", function (_, button)
+	clickOverlay:SetScript("OnMouseDown", function(_, button)
 		local direction
 		if button == "LeftButton" then
 			direction = "forward"
 		else
 			direction = "backward"
 		end
-		AngryAssign:Paginate(direction)
+		AngrySparks:Paginate(direction)
 	end)
 	self.clickOverlay = clickOverlay
 
@@ -1684,27 +1754,27 @@ function AngryAssign:CreateDisplay()
 	self.pagination = pagination
 
 	local paginationText = pagination:CreateFontString()
-	local fontName = LSM:Fetch("font", AngryAssign:GetConfig('fontName'))
-	local fontHeight = AngryAssign:GetConfig('fontHeight')
-	local fontFlags = AngryAssign:GetConfig('fontFlags')
+	local fontName = LSM:Fetch("font", AngrySparks:GetConfig('fontName') --[[@as string]])
+	local fontHeight = AngrySparks:GetConfig('fontHeight')
+	local fontFlags = AngrySparks:GetConfig('fontFlags')
 
-	paginationText:SetTextColor( HexToRGB(self:GetConfig('color')) )
+	paginationText:SetTextColor(HexToRGB(self:GetConfig('color')))
 	paginationText:SetFont(fontName, fontHeight, fontFlags)
 	paginationText:SetPoint("TOPRIGHT")
 	self.paginationText = paginationText
 
 	local mover = CreateFrame("Frame", "AngryAssMover", frame, BackdropTemplateMixin and "BackdropTemplate" or nil)
 	mover:SetFrameLevel(clickOverlay:GetFrameLevel() + 10)
-	mover:SetPoint("LEFT",0,0)
-	mover:SetPoint("RIGHT",0,0)
+	mover:SetPoint("LEFT", 0, 0)
+	mover:SetPoint("RIGHT", 0, 0)
 	mover:SetHeight(16)
 	mover:EnableMouse(true)
 	mover:SetBackdrop({ bgFile = "Interface\\Tooltips\\UI-Tooltip-Background" })
-	mover:SetBackdropColor( 0.616, 0.149, 0.114, 0.9)
+	mover:SetBackdropColor(0.616, 0.149, 0.114, 0.9)
 	mover:SetScript("OnMouseDown", Mover_MouseDown)
 	mover:SetScript("OnMouseUp", Mover_MouseUp)
 	self.mover = mover
-	if AngryAssign_State.locked then mover:Hide() end
+	if AngrySparks_State.locked then mover:Hide() end
 
 	local label = mover:CreateFontString()
 	label:SetFontObject("GameFontNormal")
@@ -1720,7 +1790,7 @@ function AngryAssign:CreateDisplay()
 	direction:SetNormalTexture("Interface\\Buttons\\UI-Panel-QuestHideButton")
 	direction:SetPushedTexture("Interface\\Buttons\\UI-Panel-QuestHideButton")
 	direction:SetHighlightTexture("Interface\\Buttons\\UI-Panel-MinimizeButton-Highlight", "ADD")
-	direction:SetScript("OnClick", function() AngryAssign:ToggleDirection() end)
+	direction:SetScript("OnClick", function() AngrySparks:ToggleDirection() end)
 	self.direction_button = direction
 
 	local lock = CreateFrame("Button", "AngryAssLock", mover)
@@ -1729,7 +1799,7 @@ function AngryAssign:CreateDisplay()
 	lock:SetPoint("LEFT", direction, "RIGHT", 4, 0)
 	lock:SetWidth(12)
 	lock:SetHeight(14)
-	lock:SetScript("OnClick", function() AngryAssign:ToggleLock() end)
+	lock:SetScript("OnClick", function() AngrySparks:ToggleLock() end)
 
 	local drag = CreateFrame("Frame", "AngryAssDrag", mover)
 	drag:SetFrameLevel(mover:GetFrameLevel() + 10)
@@ -1753,7 +1823,7 @@ function AngryAssign:CreateDisplay()
 	glow:SetTexture("Interface\\AddOns\\AngryGirls\\Textures\\LevelUpTex")
 	glow:SetSize(223, 115)
 	glow:SetTexCoord(0.56054688, 0.99609375, 0.24218750, 0.46679688)
-	glow:SetVertexColor( HexToRGB(self:GetConfig('glowColor')) )
+	glow:SetVertexColor(HexToRGB(self:GetConfig('glowColor')))
 	glow:SetAlpha(0)
 	self.display_glow = glow
 
@@ -1762,31 +1832,31 @@ function AngryAssign:CreateDisplay()
 	glow2:SetTexture("Interface\\AddOns\\AngryGirls\\Textures\\LevelUpTex")
 	glow2:SetSize(418, 7)
 	glow2:SetTexCoord(0.00195313, 0.81835938, 0.01953125, 0.03320313)
-	glow2:SetVertexColor( HexToRGB(self:GetConfig('glowColor')) )
+	glow2:SetVertexColor(HexToRGB(self:GetConfig('glowColor')))
 	glow2:SetAlpha(0)
 	self.display_glow2 = glow2
 
-	if AngryAssign_State.display.hidden then text:Hide() end
+	if AngrySparks_State.display.hidden then text:Hide() end
 	self:UpdateMedia()
 	self:UpdateDirection()
 end
 
-function AngryAssign:ToggleLock()
-	AngryAssign_State.locked = not AngryAssign_State.locked
-	if AngryAssign_State.locked then
+function AngrySparks:ToggleLock()
+	AngrySparks_State.locked = not AngrySparks_State.locked
+	if AngrySparks_State.locked then
 		self.mover:Hide()
 	else
 		self.mover:Show()
 	end
 end
 
-function AngryAssign:ToggleDirection()
-	AngryAssign_State.directionUp = not AngryAssign_State.directionUp
+function AngrySparks:ToggleDirection()
+	AngrySparks_State.directionUp = not AngrySparks_State.directionUp
 	self:UpdateDirection()
 end
 
-function AngryAssign:UpdateDirection()
-	if AngryAssign_State.directionUp then
+function AngrySparks:UpdateDirection()
+	if AngrySparks_State.directionUp then
 		self.display_text:ClearAllPoints()
 		self.display_text:SetPoint("BOTTOMLEFT", 0, 8)
 		self.display_text:SetPoint("RIGHT", 0, 0)
@@ -1820,7 +1890,7 @@ function AngryAssign:UpdateDirection()
 	self:UpdateDisplayed()
 end
 
-function AngryAssign:SyncTextSizeFrames()
+function AngrySparks:SyncTextSizeFrames()
 	local first, last
 	for lineIndex, visibleLine in ipairs(self.display_text.visibleLines) do
 		local messageInfo = self.display_text.historyBuffer:GetEntryAtIndex(lineIndex)
@@ -1834,10 +1904,10 @@ function AngryAssign:SyncTextSizeFrames()
 	self:ResizeClickOverlay(first, last)
 end
 
-function AngryAssign:ResizeClickOverlay(first, last)
-	if first and last  then
+function AngrySparks:ResizeClickOverlay(first, last)
+	if first and last then
 		self.clickOverlay:ClearAllPoints()
-		if AngryAssign_State.directionUp then
+		if AngrySparks_State.directionUp then
 			self.clickOverlay:SetPoint("TOPLEFT", last, "TOPLEFT", -4, 4)
 			self.clickOverlay:SetPoint("BOTTOMRIGHT", first, "BOTTOMRIGHT", 4, -4)
 		else
@@ -1850,17 +1920,17 @@ function AngryAssign:ResizeClickOverlay(first, last)
 	end
 end
 
-function AngryAssign:ResizeBackdrop(first, last)
+function AngrySparks:ResizeBackdrop(first, last)
 	if first and last and self:GetConfig('backdropShow') then
 		self.backdrop:ClearAllPoints()
-		if AngryAssign_State.directionUp then
+		if AngrySparks_State.directionUp then
 			self.backdrop:SetPoint("TOPLEFT", last, "TOPLEFT", -4, 4)
 			self.backdrop:SetPoint("BOTTOMRIGHT", first, "BOTTOMRIGHT", 4, -4)
 		else
 			self.backdrop:SetPoint("TOPLEFT", first, "TOPLEFT", -4, 4)
 			self.backdrop:SetPoint("BOTTOMRIGHT", last, "BOTTOMRIGHT", 4, -4)
 		end
-		self.backdrop:SetColorTexture( HexToRGB(self:GetConfig('backdropColor')) )
+		self.backdrop:SetColorTexture(HexToRGB(self:GetConfig('backdropColor')))
 		self.backdrop:Show()
 	else
 		self.backdrop:Hide()
@@ -1868,14 +1938,14 @@ function AngryAssign:ResizeBackdrop(first, last)
 end
 
 local editFontName, editFontHeight, editFontFlags
-function AngryAssign:UpdateMedia()
-	local fontName = LSM:Fetch("font", AngryAssign:GetConfig('fontName'))
-	local fontHeight = AngryAssign:GetConfig('fontHeight')
-	local fontFlags = AngryAssign:GetConfig('fontFlags')
+function AngrySparks:UpdateMedia()
+	local fontName = LSM:Fetch("font", AngrySparks:GetConfig('fontName'))
+	local fontHeight = AngrySparks:GetConfig('fontHeight')
+	local fontFlags = AngrySparks:GetConfig('fontFlags')
 
-	self.display_text:SetTextColor( HexToRGB(self:GetConfig('color')) )
+	self.display_text:SetTextColor(HexToRGB(self:GetConfig('color')))
 	self.display_text:SetFont(fontName, fontHeight, fontFlags)
-	self.display_text:SetSpacing( AngryAssign:GetConfig('lineSpacing') )
+	self.display_text:SetSpacing(AngrySparks:GetConfig('lineSpacing'))
 
 	if self.window then
 		if self:GetConfig('editBoxFont') then
@@ -1892,7 +1962,7 @@ function AngryAssign:UpdateMedia()
 end
 
 local updateFlasher, updateFlasher2 = nil, nil
-function AngryAssign:DisplayUpdateNotification()
+function AngrySparks:DisplayUpdateNotification()
 	if updateFlasher == nil then
 		updateFlasher = self.display_glow:CreateAnimationGroup()
 
@@ -1949,7 +2019,7 @@ local function ci_pattern(pattern)
 	return p
 end
 
-function AngryAssign:UpdateDisplayedIfNewGroup()
+function AngrySparks:UpdateDisplayedIfNewGroup()
 	local newGroup = self:GetCurrentGroup()
 	if newGroup ~= currentGroup then
 		currentGroup = newGroup
@@ -1957,24 +2027,24 @@ function AngryAssign:UpdateDisplayedIfNewGroup()
 	end
 end
 
-function AngryAssign:ReplaceVariables(text)
-	for _, v in ipairs(AngryAssign_Variables) do
-		text = text:gsub("{"..v[1].."}", v[2])
+function AngrySparks:ReplaceVariables(text)
+	for _, v in ipairs(AngrySparks_Variables) do
+		text = text:gsub("{" .. v[1] .. "}", v[2])
 	end
 
 	return text
 end
 
-function AngryAssign:UpdateDisplayed()
-	local page = AngryAssign_Pages[ AngryAssign_State.displayed ]
+function AngrySparks:UpdateDisplayed()
+	local page = AngrySparks_Pages[AngrySparks_State.displayed]
 	if page then
 		local text = page.Contents
 
-		local highlights = { }
-		for token in string.gmatch( AngryAssign:GetConfig('highlight') , "[^%s%p]+") do
+		local highlights = {}
+		for token in string.gmatch(AngrySparks:GetConfig('highlight'), "[^%s%p]+") do
 			token = token:lower()
-			if token == 'group'then
-				tinsert(highlights, 'g'..(currentGroup or 0))
+			if token == 'group' then
+				tinsert(highlights, 'g' .. (currentGroup or 0))
 			else
 				tinsert(highlights, token)
 			end
@@ -1982,7 +2052,7 @@ function AngryAssign:UpdateDisplayed()
 
 		local highlightHex = self:GetConfig('highlightColor')
 
-		text = AngryAssign:ReplaceVariables(text)
+		text = AngrySparks:ReplaceVariables(text)
 
 		text = text:gsub("||", "|")
 			:gsub(ci_pattern('|cblue'), "|cff00cbf4")
@@ -2022,26 +2092,35 @@ function AngryAssign:UpdateDisplayed()
 			:gsub(ci_pattern('{cross}'), "{rt7}")
 			:gsub(ci_pattern('{x}'), "{rt7}")
 			:gsub(ci_pattern('{skull}'), "{rt8}")
-			:gsub(ci_pattern('{rt([1-8])}'), "|TInterface\\TargetingFrame\\UI-RaidTargetingIcon_%1:0|t" )
+			:gsub(ci_pattern('{rt([1-8])}'), "|TInterface\\TargetingFrame\\UI-RaidTargetingIcon_%1:0|t")
 			:gsub(ci_pattern('{healthstone}'), "{hs}")
 			:gsub(ci_pattern('{hs}'), "|TInterface\\Icons\\INV_Stone_04:0|t")
 			:gsub(ci_pattern('{icon%s+(%d+)}'), function(id)
-				return format("|T%s:0|t", select(3, GetSpellInfo(tonumber(id))) )
+				return format("|T%s:0|t", select(3, GetSpellInfo(tonumber(id))))
 			end)
 			:gsub(ci_pattern('{icon%s+([%w_]+)}'), "|TInterface\\Icons\\%1:0|t")
 			:gsub(ci_pattern('{damage}'), "{dps}")
 			:gsub(ci_pattern('{tank}'), "|TInterface\\LFGFrame\\UI-LFG-ICON-PORTRAITROLES:0:0:0:0:64:64:0:19:22:41|t")
 			:gsub(ci_pattern('{healer}'), "|TInterface\\LFGFrame\\UI-LFG-ICON-PORTRAITROLES:0:0:0:0:64:64:20:39:1:20|t")
 			:gsub(ci_pattern('{dps}'), "|TInterface\\LFGFrame\\UI-LFG-ICON-PORTRAITROLES:0:0:0:0:64:64:20:39:22:41|t")
-			:gsub(ci_pattern('{hunter}'), "|TInterface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES:0:0:0:0:64:64:0:16:16:32|t")
-			:gsub(ci_pattern('{warrior}'), "|TInterface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES:0:0:0:0:64:64:0:16:0:16|t")
-			:gsub(ci_pattern('{rogue}'), "|TInterface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES:0:0:0:0:64:64:32:48:0:16|t")
-			:gsub(ci_pattern('{mage}'), "|TInterface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES:0:0:0:0:64:64:16:32:0:16|t")
-			:gsub(ci_pattern('{priest}'), "|TInterface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES:0:0:0:0:64:64:32:48:16:32|t")
-			:gsub(ci_pattern('{warlock}'), "|TInterface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES:0:0:0:0:64:64:48:64:16:32|t")
-			:gsub(ci_pattern('{paladin}'), "|TInterface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES:0:0:0:0:64:64:0:16:32:48|t")
-			:gsub(ci_pattern('{druid}'), "|TInterface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES:0:0:0:0:64:64:48:64:0:16|t")
-			:gsub(ci_pattern('{shaman}'), "|TInterface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES:0:0:0:0:64:64:16:32:16:32|t")
+			:gsub(ci_pattern('{hunter}'),
+				"|TInterface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES:0:0:0:0:64:64:0:16:16:32|t")
+			:gsub(ci_pattern('{warrior}'),
+				"|TInterface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES:0:0:0:0:64:64:0:16:0:16|t")
+			:gsub(ci_pattern('{rogue}'),
+				"|TInterface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES:0:0:0:0:64:64:32:48:0:16|t")
+			:gsub(ci_pattern('{mage}'),
+				"|TInterface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES:0:0:0:0:64:64:16:32:0:16|t")
+			:gsub(ci_pattern('{priest}'),
+				"|TInterface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES:0:0:0:0:64:64:32:48:16:32|t")
+			:gsub(ci_pattern('{warlock}'),
+				"|TInterface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES:0:0:0:0:64:64:48:64:16:32|t")
+			:gsub(ci_pattern('{paladin}'),
+				"|TInterface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES:0:0:0:0:64:64:0:16:32:48|t")
+			:gsub(ci_pattern('{druid}'),
+				"|TInterface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES:0:0:0:0:64:64:48:64:0:16|t")
+			:gsub(ci_pattern('{shaman}'),
+				"|TInterface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES:0:0:0:0:64:64:16:32:16:32|t")
 			:gsub(ci_pattern('{elemental}'), "|T136048:0|t")
 			:gsub(ci_pattern('{moonkin}'), "|T136096:0|t")
 			:gsub(ci_pattern('{spriest}'), "|T136200:0|t")
@@ -2060,29 +2139,32 @@ function AngryAssign:UpdateDisplayed()
 				:gsub(ci_pattern('{heroism}'), "|TInterface\\Icons\\ABILITY_Shaman_Heroism:0|t")
 				:gsub(ci_pattern('{bloodlust}'), "{bl}")
 				:gsub(ci_pattern('{bl}'), "|TInterface\\Icons\\SPELL_Nature_Bloodlust:0|t")
-				:gsub(ci_pattern('{deathknight}'), "|TInterface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES:0:0:0:0:64:64:16:32:32:48|t")
-				:gsub(ci_pattern('{monk}'), "|TInterface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES:0:0:0:0:64:64:32:48:32:48|t")
-				:gsub(ci_pattern('{demonhunter}'), "|TInterface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES:0:0:0:0:64:64:64:48:32:48|t")
+				:gsub(ci_pattern('{deathknight}'),
+					"|TInterface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES:0:0:0:0:64:64:16:32:32:48|t")
+				:gsub(ci_pattern('{monk}'),
+					"|TInterface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES:0:0:0:0:64:64:32:48:32:48|t")
+				:gsub(ci_pattern('{demonhunter}'),
+					"|TInterface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES:0:0:0:0:64:64:64:48:32:48|t")
 		end
 
 		self.display_text:Clear()
 
 		local pages = explode("{page}", text)
 
-		if pages[AngryAssign_State.currentPage] == nil then
-			if AngryAssign_State.currentPage == nil or AngryAssign_State.currentPage > 1 then
-				AngryAssign_State.currentPage = 1
+		if pages[AngrySparks_State.currentPage] == nil then
+			if AngrySparks_State.currentPage == nil or AngrySparks_State.currentPage > 1 then
+				AngrySparks_State.currentPage = 1
 			else
-				AngryAssign_State.currentPage = #pages
+				AngrySparks_State.currentPage = #pages
 			end
 		end
 
-		local lines = { strsplit("\n", pages[AngryAssign_State.currentPage]) }
+		local lines = { strsplit("\n", pages[AngrySparks_State.currentPage]) }
 
 		local lines_count = #lines
 		for i = 1, lines_count do
 			local line
-			if AngryAssign_State.directionUp then
+			if AngrySparks_State.directionUp then
 				line = lines[i]
 			else
 				line = lines[lines_count - i + 1]
@@ -2092,7 +2174,7 @@ function AngryAssign:UpdateDisplayed()
 		end
 
 		if #pages > 1 then
-			self.paginationText:SetText("("..AngryAssign_State.currentPage.."/"..#pages..")")
+			self.paginationText:SetText("(" .. AngrySparks_State.currentPage .. "/" .. #pages .. ")")
 			self.paginationText:Show()
 		else
 			self.paginationText:Hide()
@@ -2103,15 +2185,16 @@ function AngryAssign:UpdateDisplayed()
 	self:SyncTextSizeFrames()
 end
 
-function AngryAssign_OutputDisplayed()
-	return AngryAssign:OutputDisplayed( AngryAssign:SelectedId() )
+function AngrySparks_OutputDisplayed()
+	return AngrySparks:OutputDisplayed(AngrySparks:SelectedId())
 end
-function AngryAssign:OutputDisplayed(id)
+
+function AngrySparks:OutputDisplayed(id)
 	if not self:PermissionCheck() then
-		self:Print( RED_FONT_COLOR_CODE .. "You don't have permission to output a page.|r" )
+		self:Print(RED_FONT_COLOR_CODE .. "You don't have permission to output a page.|r")
 	end
-	if not id then id = AngryAssign_State.displayed end
-	local page = AngryAssign_Pages[ id ]
+	if not id then id = AngrySparks_State.displayed end
+	local page = AngrySparks_Pages[id]
 	local channel
 	if not isClassic and (IsInGroup(LE_PARTY_CATEGORY_INSTANCE) or IsInRaid(LE_PARTY_CATEGORY_INSTANCE)) then
 		channel = "INSTANCE_CHAT"
@@ -2123,7 +2206,7 @@ function AngryAssign:OutputDisplayed(id)
 	if channel and page then
 		local output = page.Contents
 
-		output = AngryAssign:ReplaceVariables(output)
+		output = AngrySparks:ReplaceVariables(output)
 
 		output = output:gsub("||", "|")
 			:gsub(ci_pattern('|r'), "")
@@ -2214,7 +2297,7 @@ local configDefaults = {
 	hideoncombat = false,
 	fontName = "Friz Quadrata TT",
 	fontHeight = 12,
-	fontFlags = "NONE",
+	fontFlags = nil, -- "NONE",
 	highlight = "",
 	highlightColor = "ffd200",
 	color = "ffffff",
@@ -2227,43 +2310,43 @@ local configDefaults = {
 	editBoxFont = false,
 }
 
-function AngryAssign:GetConfig(key)
-	if AngryAssign_Config[key] == nil then
+function AngrySparks:GetConfig(key)
+	if AngrySparks_Config[key] == nil then
 		return configDefaults[key]
 	else
-		return AngryAssign_Config[key]
+		return AngrySparks_Config[key]
 	end
 end
 
-function AngryAssign:SetConfig(key, value)
+function AngrySparks:SetConfig(key, value)
 	if configDefaults[key] == value then
-		AngryAssign_Config[key] = nil
+		AngrySparks_Config[key] = nil
 	else
-		AngryAssign_Config[key] = value
+		AngrySparks_Config[key] = value
 	end
 end
 
-function AngryAssign:RestoreDefaults()
-	AngryAssign_Config = {}
+function AngrySparks:RestoreDefaults()
+	AngrySparks_Config = {}
 	self:UpdateMedia()
 	self:UpdateDisplayed()
-	LibStub("AceConfigRegistry-3.0"):NotifyChange("AngryAssign")
+	LibStub("AceConfigRegistry-3.0"):NotifyChange("AngrySparks")
 end
 
 local blizOptionsPanel
-function AngryAssign:OnInitialize()
-	if AngryAssign_State == nil then
-		AngryAssign_State = { tree = {}, window = {}, display = {}, displayed = nil, locked = false, directionUp = false, currentPage = 1 }
+function AngrySparks:OnInitialize()
+	if AngrySparks_State == nil then
+		AngrySparks_State = { tree = {}, window = {}, display = {}, displayed = nil, locked = false, directionUp = false, currentPage = 1 }
 	end
-	if AngryAssign_Pages == nil then AngryAssign_Pages = { } end
-	if AngryAssign_Config == nil then AngryAssign_Config = { } end
-	if AngryAssign_Categories == nil then
-		AngryAssign_Categories = { }
+	if AngrySparks_Pages == nil then AngrySparks_Pages = {} end
+	if AngrySparks_Config == nil then AngrySparks_Config = {} end
+	if AngrySparks_Categories == nil then
+		AngrySparks_Categories = {}
 	else
-		for _, cat in pairs(AngryAssign_Categories) do
+		for _, cat in pairs(AngrySparks_Categories) do
 			if cat.Children then
 				for _, pageId in ipairs(cat.Children) do
-					local page = AngryAssign_Pages[pageId]
+					local page = AngrySparks_Pages[pageId]
 					if page then
 						page.CategoryId = cat.Id
 					end
@@ -2272,18 +2355,18 @@ function AngryAssign:OnInitialize()
 			end
 		end
 	end
-	if AngryAssign_Variables == nil then
-		AngryAssign_Variables = { }
-		AngryAssign_Variables[1] = {"tank1", "Daxxiz"}
-		AngryAssign_Variables[2] = {"mage1", "Praxxis"}
+	if AngrySparks_Variables == nil then
+		AngrySparks_Variables = {}
+		AngrySparks_Variables[1] = { "tank1", "Daxxiz" }
+		AngrySparks_Variables[2] = { "mage1", "Praxxis" }
 	end
 
-	local ver = AngryAssign_Version
-	if ver:sub(1,1) == "@" then ver = "dev" end
+	local ver = AngrySparks_Version
+	if ver:sub(1, 1) == "@" then ver = "dev" end
 
 	local options = {
-		name = "Angry Girls "..ver,
-		handler = AngryAssign,
+		name = "Angry Girls " .. ver,
+		handler = AngrySparks,
 		type = "group",
 		args = {
 			window = {
@@ -2291,7 +2374,7 @@ function AngryAssign:OnInitialize()
 				order = 3,
 				name = "Toggle Window",
 				desc = "Shows/hides the edit window (also available in game keybindings)",
-				func = function() AngryAssign_ToggleWindow() end
+				func = function() AngrySparks_ToggleWindow() end
 			},
 			help = {
 				type = "execute",
@@ -2299,7 +2382,7 @@ function AngryAssign:OnInitialize()
 				name = "Help",
 				hidden = true,
 				func = function()
-					LibStub("AceConfigCmd-3.0").HandleCommand(self, "aa", "AngryAssign", "")
+					LibStub("AceConfigCmd-3.0").HandleCommand(self, "aa", "AngrySparks", "")
 				end
 			},
 			toggle = {
@@ -2307,7 +2390,7 @@ function AngryAssign:OnInitialize()
 				order = 1,
 				name = "Toggle Display",
 				desc = "Shows/hides the display frame (also available in game keybindings)",
-				func = function() AngryAssign_ToggleDisplay() end
+				func = function() AngrySparks_ToggleDisplay() end
 			},
 			deleteall = {
 				type = "execute",
@@ -2318,9 +2401,9 @@ function AngryAssign:OnInitialize()
 				cmdHidden = false,
 				confirm = true,
 				func = function()
-					AngryAssign_State.displayed = nil
-					AngryAssign_Pages = {}
-					AngryAssign_Categories = {}
+					AngrySparks_State.displayed = nil
+					AngrySparks_Pages = {}
+					AngrySparks_Categories = {}
 					self:UpdateTree()
 					self:UpdateSelected()
 					self:UpdateDisplayed()
@@ -2362,11 +2445,12 @@ function AngryAssign:OnInitialize()
 				confirm = true,
 				get = function(info) return "" end,
 				set = function(info, val)
-					local result = self:DisplayPageByName( val:trim() )
+					local result = self:DisplayPageByName(val:trim())
 					if result == false then
-						self:Print( RED_FONT_COLOR_CODE .. "A page with the name \""..val:trim().."\" could not be found.|r" )
+						self:Print(RED_FONT_COLOR_CODE ..
+							"A page with the name \"" .. val:trim() .. "\" could not be found.|r")
 					elseif not result then
-						self:Print( RED_FONT_COLOR_CODE .. "You don't have permission to send a page.|r" )
+						self:Print(RED_FONT_COLOR_CODE .. "You don't have permission to send a page.|r")
 					end
 				end
 			},
@@ -2379,7 +2463,7 @@ function AngryAssign:OnInitialize()
 				cmdHidden = false,
 				confirm = true,
 				func = function()
-					AngryAssign_ClearPage()
+					AngrySparks_ClearPage()
 				end
 			},
 			backup = {
@@ -2434,7 +2518,8 @@ function AngryAssign:OnInitialize()
 						type = "input",
 						order = 1,
 						name = "Highlight",
-						desc = "A list of words to highlight on displayed pages (separated by spaces or punctuation)\n\nUse 'Group' to highlight the current group you are in, ex. G2",
+						desc =
+						"A list of words to highlight on displayed pages (separated by spaces or punctuation)\n\nUse 'Group' to highlight the current group you are in, ex. G2",
 						get = function(info) return self:GetConfig('highlight') end,
 						set = function(info, val)
 							self:SetConfig('highlight', val)
@@ -2461,7 +2546,7 @@ function AngryAssign:OnInitialize()
 						get = function(info) return self:GetConfig('scale') end,
 						set = function(info, val)
 							self:SetConfig('scale', val)
-							if AngryAssign.window then AngryAssign.window.frame:SetScale(val) end
+							if AngrySparks.window then AngrySparks.window.frame:SetScale(val) end
 						end
 					},
 					backdrop = {
@@ -2601,7 +2686,7 @@ function AngryAssign:OnInitialize()
 							self:UpdateDisplayed()
 						end
 					},
-					editBoxFont =  {
+					editBoxFont = {
 						type = "toggle",
 						order = 7,
 						name = "Change Edit Box Font",
@@ -2635,7 +2720,8 @@ function AngryAssign:OnInitialize()
 						type = "input",
 						order = 2,
 						name = "Allow Players",
-						desc = "A list of players that when they are the raid leader to allow changes from all raid assistants",
+						desc =
+						"A list of players that when they are the raid leader to allow changes from all raid assistants",
 						get = function(info) return self:GetConfig('allowplayers') end,
 						set = function(info, val)
 							self:SetConfig('allowplayers', val)
@@ -2648,22 +2734,22 @@ function AngryAssign:OnInitialize()
 	}
 
 	self:RegisterChatCommand("aa", "ChatCommand")
-	LibStub("AceConfig-3.0"):RegisterOptionsTable("AngryAssign", options)
+	LibStub("AceConfig-3.0"):RegisterOptionsTable("AngrySparks", options)
 
-	blizOptionsPanel = LibStub("AceConfigDialog-3.0"):AddToBlizOptions("AngryAssign", "Angry Girls")
+	blizOptionsPanel = LibStub("AceConfigDialog-3.0"):AddToBlizOptions("AngrySparks", "Angry Girls")
 	blizOptionsPanel.default = function() self:RestoreDefaults() end
 end
 
-function AngryAssign:ChatCommand(input)
-  if not input or input:trim() == "" then
-	InterfaceOptionsFrame_OpenToCategory(blizOptionsPanel)
-	InterfaceOptionsFrame_OpenToCategory(blizOptionsPanel)
-  else
-    LibStub("AceConfigCmd-3.0").HandleCommand(self, "aa", "AngryAssign", input)
-  end
+function AngrySparks:ChatCommand(input)
+	if not input or input:trim() == "" then
+		InterfaceOptionsFrame_OpenToCategory(blizOptionsPanel)
+		InterfaceOptionsFrame_OpenToCategory(blizOptionsPanel)
+	else
+		LibStub("AceConfigCmd-3.0").HandleCommand(self, "aa", "AngrySparks", input)
+	end
 end
 
-function AngryAssign:OnEnable()
+function AngrySparks:OnEnable()
 	self:CreateDisplay()
 
 	self:ScheduleTimer("AfterEnable", 4)
@@ -2678,32 +2764,31 @@ function AngryAssign:OnEnable()
 	LSM.RegisterCallback(self, "LibSharedMedia_SetGlobal", "UpdateMedia")
 end
 
-
-function AngryAssign:PARTY_LEADER_CHANGED()
+function AngrySparks:PARTY_LEADER_CHANGED()
 	self:PermissionsUpdated()
-	if AngryAssign_State.displayed and not self:IsValidRaid() then
+	if AngrySparks_State.displayed and not self:IsValidRaid() then
 		self:ClearDisplayed()
 	end
 end
 
-function AngryAssign:GROUP_JOINED()
+function AngrySparks:GROUP_JOINED()
 	self:SendVerQuery()
 	self:UpdateDisplayedIfNewGroup()
 	self:ScheduleTimer("SendRequestDisplay", 0.5)
 end
 
-function AngryAssign:PLAYER_REGEN_DISABLED()
-	if AngryAssign:GetConfig('hideoncombat') then
+function AngrySparks:PLAYER_REGEN_DISABLED()
+	if AngrySparks:GetConfig('hideoncombat') then
 		self:HideDisplay()
 	end
 end
 
-function AngryAssign:GROUP_ROSTER_UPDATE()
+function AngrySparks:GROUP_ROSTER_UPDATE()
 	self:UpdateSelected()
 	if not (IsInRaid() or IsInGroup()) then
-		if AngryAssign_State.displayed then
+		if AngrySparks_State.displayed then
 			self:ClearDisplayed()
-		 end
+		end
 		currentGroup = nil
 		warnedPermission = false
 	else
@@ -2711,18 +2796,18 @@ function AngryAssign:GROUP_ROSTER_UPDATE()
 	end
 end
 
-function AngryAssign:PLAYER_GUILD_UPDATE()
+function AngrySparks:PLAYER_GUILD_UPDATE()
 	self:PermissionsUpdated()
 end
 
-function AngryAssign:GUILD_ROSTER_UPDATE(...)
+function AngrySparks:GUILD_ROSTER_UPDATE(...)
 	local canRequestRosterUpdate = ...
 	if canRequestRosterUpdate then
 		GuildRoster()
 	end
 end
 
-function AngryAssign:AfterEnable()
+function AngrySparks:AfterEnable()
 	self:RegisterComm(comPrefix, "ReceiveMessage")
 	comStarted = true
 

@@ -8,5 +8,5 @@
 ## X-Category: Library
 ## X-License: Public Domain
 
-LibStub.lua
+#LibStub.lua
 LibWindow-1.1\LibWindow-1.1.lua

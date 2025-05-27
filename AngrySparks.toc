@@ -1,10 +1,10 @@
 #
 # Do not edit - this file is generated from TOC_TEMPLATE.TOC
 #
-## Interface: ${UI_VERSION}
-## Title: ${ADDON_TITLE}
+## Interface: 11507
+## Title: Angry Sparks
 ## Author: kvakvs (forked from Angry Girls by Praxxis, from Angry Assignments by Ermad)
-## Version: ${VERSION}
+## Version: 2025.5.0-5ac7161b
 ## OptionalDeps: Ace3, AceGUI-3.0-SharedMediaWidgets, LibCompress,
 ## DefaultState: enabled
 ## SavedVariables: AngrySparks_Pages,AngrySparks_Categories,AngrySparks_State,AngrySparks_Config,AngrySparks_Variables

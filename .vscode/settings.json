@@ -38,6 +38,7 @@
         "SetDesaturation",
         "ColorPickerFrame",
         "NOT_BOUND",
-        "ChatFrame1"
+        "ChatFrame1",
+        "Settings"
     ]
 }
