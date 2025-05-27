@@ -1,0 +1,21 @@
+#
+# Do not edit - this file is generated from TOC_TEMPLATE.TOC
+#
+## Interface: ${UI_VERSION}
+## Title: ${ADDON_TITLE}
+## Author: kvakvs (forked from Angry Grisl by Praxxis, forked from Angry Assignments by Ermad)
+## Version: ${VERSION}
+## OptionalDeps: Ace3, AceGUI-3.0-SharedMediaWidgets, LibCompress,
+## DefaultState: enabled
+## SavedVariables: AngryAssign_Pages,AngryAssign_Categories,AngryAssign_State,AngryAssign_Config,AngryAssign_Variables
+## SavedVariablesPerCharacter:
+LibWindow-1.1
+
+embeds.xml
+
+Src/Core.lua
+Src/TreeGroup.lua
+
+#
+# Do not edit - this file is generated from TOC_TEMPLATE.TOC
+#
