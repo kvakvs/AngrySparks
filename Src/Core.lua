@@ -1064,7 +1064,7 @@ function AngrySparks:CreateWindow()
 	window.button_restore = button_restore
 
 	local button_output = AceGUI:Create("Button")
-	button_output:SetText("Output")
+	button_output:SetText("/raid")
 	button_output:SetWidth(80)
 	button_output:SetHeight(22)
 	button_output:ClearAllPoints()
@@ -1075,7 +1075,7 @@ function AngrySparks:CreateWindow()
 
 	window:PauseLayout()
 	local button_add = AceGUI:Create("Button")
-	button_add:SetText("Add")
+	button_add:SetText("+Page")
 	button_add:SetWidth(80)
 	button_add:SetHeight(19)
 	button_add:ClearAllPoints()
