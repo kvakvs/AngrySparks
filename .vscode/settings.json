@@ -39,6 +39,13 @@
         "ColorPickerFrame",
         "NOT_BOUND",
         "ChatFrame1",
-        "Settings"
-    ]
+        "Settings",
+        "UIDropDownMenu_Initialize",
+        "ToggleDropDownMenu",
+        "UIDropDownMenu_AddButton"
+    ],
+    "Lua.diagnostics.disable": [
+        "assign-type-mismatch"
+    ],
+    "Lua.type.weakUnionCheck": true
 }

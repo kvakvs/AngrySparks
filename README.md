@@ -1,4 +1,4 @@
-# Angry Girls
+# Angry Sparks
 
 This is a fork of [Angry Assignments](https://www.curseforge.com/wow/addons/angry-assignments) with additions by &lt;girls only&gt; of Mankrik Horde. You can see the readme for Angry Assignments [here](ANGRYASSIGN_README.md).
 

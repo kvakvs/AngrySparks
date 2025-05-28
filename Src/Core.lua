@@ -9,13 +9,15 @@ local libC = LibStub("LibCompress")
 local LibSerialize = LibStub("LibSerialize")
 local LibDeflate = LibStub("LibDeflate")
 
-BINDING_HEADER_AngrySparks = "Angry Girls"
+BINDING_HEADER_AngrySparks = "Angry Sparks"
 BINDING_NAME_AngrySparks_WINDOW = "Toggle Window"
 BINDING_NAME_AngrySparks_LOCK = "Toggle Lock"
 BINDING_NAME_AngrySparks_DISPLAY = "Toggle Display"
 BINDING_NAME_AngrySparks_SHOW_DISPLAY = "Show Display"
 BINDING_NAME_AngrySparks_HIDE_DISPLAY = "Hide Display"
 BINDING_NAME_AngrySparks_OUTPUT = "Output Assignment to Chat"
+
+local CURSEFORGE_URL = "https://legacy.curseforge.com/wow/addons/angry-sparks"
 
 local AngrySparks_Version = '@project-version@'
 local AngrySparks_Timestamp = '@project-date-integer@'
@@ -120,7 +122,7 @@ local function dbg(msg, data)
 	else
 		if not dbgMessageShown then
 			print(
-				"Please install ViragDevTool from http://mods.curse.com/addons/wow/varrendevtool to view debug info for Angry Girls.")
+				"Please install ViragDevTool from http://mods.curse.com/addons/wow/varrendevtool to view debug info for Angry Sparks.")
 			dbgMessageShown = true
 		end
 	end
@@ -356,7 +358,7 @@ function AngrySparks:ProcessMessage(sender, data)
 
 		if localTimestamp ~= "dev" and timestamp ~= "dev" and timestamp > localTimestamp and not warnedOOD then
 			self:Print(
-				"Your version of Angry Girls is out of date! Download the latest version from https://www.curseforge.com/wow/addons/angry-girls.")
+				"Your version of Angry Sparks is out of date! Download the latest version from " .. CURSEFORGE_URL)
 			warnedOOD = true
 		end
 
@@ -976,7 +978,7 @@ end
 
 function AngrySparks:CreateWindow()
 	local window = AceGUI:Create("Frame")
-	window:SetTitle("Angry Girls")
+	window:SetTitle("Angry Sparks")
 	window:SetStatusText("")
 	window:SetLayout("Flow")
 	if AngrySparks:GetConfig('scale') then window.frame:SetScale(AngrySparks:GetConfig('scale')) end
@@ -985,7 +987,11 @@ function AngrySparks:CreateWindow()
 	AngrySparks.window = window
 
 	AngrySparks_Window = window.frame
-	window.frame:SetMinResize(750, 400)
+	if window.frame.SetResizeBounds then
+		window.frame:SetResizeBounds(750, 400)
+	else
+		window.frame:SetMinResize(750, 400)
+	end
 	window.frame:SetFrameStrata("HIGH")
 	window.frame:SetFrameLevel(1)
 	window.frame:SetClampedToScreen(true)
@@ -1141,7 +1147,11 @@ function AngrySparks:CreateVariablesWindow()
 	window:SetTitle("Variables")
 	window:SetStatusText("")
 	window:SetLayout("Flow")
-	window.frame:SetMinResize(750, 400)
+	if window.frame.SetResizeBounds then
+		window.frame:SetResizeBounds(750, 400)
+	else
+		window.frame:SetMinResize(750, 400)
+	end
 	window.frame:SetFrameStrata("HIGH")
 	window.frame:SetFrameLevel(1)
 	window.frame:SetClampedToScreen(true)
@@ -1781,7 +1791,7 @@ function AngrySparks:CreateDisplay()
 	label:SetJustifyH("CENTER")
 	label:SetPoint("LEFT", 38, 0)
 	label:SetPoint("RIGHT", -38, 0)
-	label:SetText("Angry Girls")
+	label:SetText("Angry Sparks")
 
 	local direction = CreateFrame("Button", "AngryAssDirection", mover)
 	direction:SetPoint("LEFT", 2, 0)
@@ -2297,7 +2307,7 @@ local configDefaults = {
 	hideoncombat = false,
 	fontName = "Friz Quadrata TT",
 	fontHeight = 12,
-	fontFlags = nil, -- "NONE",
+	fontFlags = "",
 	highlight = "",
 	highlightColor = "ffd200",
 	color = "ffffff",
@@ -2365,7 +2375,7 @@ function AngrySparks:OnInitialize()
 	if ver:sub(1, 1) == "@" then ver = "dev" end
 
 	local options = {
-		name = "Angry Girls " .. ver,
+		name = "Angry Sparks " .. ver,
 		handler = AngrySparks,
 		type = "group",
 		args = {
@@ -2736,14 +2746,14 @@ function AngrySparks:OnInitialize()
 	self:RegisterChatCommand("aa", "ChatCommand")
 	LibStub("AceConfig-3.0"):RegisterOptionsTable("AngrySparks", options)
 
-	blizOptionsPanel = LibStub("AceConfigDialog-3.0"):AddToBlizOptions("AngrySparks", "Angry Girls")
+	blizOptionsPanel = LibStub("AceConfigDialog-3.0"):AddToBlizOptions("AngrySparks", "Angry Sparks")
 	blizOptionsPanel.default = function() self:RestoreDefaults() end
 end
 
 function AngrySparks:ChatCommand(input)
 	if not input or input:trim() == "" then
-		InterfaceOptionsFrame_OpenToCategory(blizOptionsPanel)
-		InterfaceOptionsFrame_OpenToCategory(blizOptionsPanel)
+		Settings.OpenToCategory(blizOptionsPanel)
+		-- Settings.OpenToCategory(blizOptionsPanel)
 	else
 		LibStub("AceConfigCmd-3.0").HandleCommand(self, "aa", "AngrySparks", input)
 	end
