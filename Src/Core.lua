@@ -1105,7 +1105,7 @@ function AngrySparks:CreateWindow()
 	window.button_delete = button_delete
 
 	local button_add_cat = AceGUI:Create("Button")
-	button_add_cat:SetText("Add Category")
+	button_add_cat:SetText("+Category")
 	button_add_cat:SetWidth(120)
 	button_add_cat:SetHeight(19)
 	button_add_cat:ClearAllPoints()
@@ -1115,7 +1115,7 @@ function AngrySparks:CreateWindow()
 	window.button_add_cat = button_add_cat
 
 	local button_variables = AceGUI:Create("Button")
-	button_variables:SetText("Set Variables")
+	button_variables:SetText("Variables")
 	button_variables:SetWidth(120)
 	button_variables:SetHeight(19)
 	button_variables:ClearAllPoints()
