@@ -1,5 +1,5 @@
----@class AngrySparksAddon: AceAddon
----@field display_text Frame
+---@class AngrySparksAddon: AceAddon, AceComm-3.0, AceEvent-3.0, AceTimer-3.0, AceConsole-3.0
+---@field display_text FontString
 ---@field backdrop Texture
 ---@field clickOverlay Frame
 ---@field pagination Frame
@@ -8,6 +8,7 @@
 ---@field direction_button Button
 ---@field display_glow Texture
 ---@field display_glow2 Texture
+---@field window AceGUIWidget
 local AngrySparks = LibStub("AceAddon-3.0"):NewAddon(
 	"AngrySparks",
 	"AceConsole-3.0", "AceEvent-3.0", "AceComm-3.0", "AceTimer-3.0"
@@ -44,8 +45,8 @@ local AngrySparks_Timestamp = '@project-date-integer@'
 
 local isClassic = (WOW_PROJECT_ID == WOW_PROJECT_BURNING_CRUSADE_CLASSIC)
 
-local protocolVersion = 3
-local comPrefix = "AngryGirls" .. protocolVersion
+local protocolVersion = 100
+local comPrefix = "[Sparks" .. protocolVersion .. "]"
 local updateThrottle = 4
 local pageLastUpdate = {}
 local pageTimerId = {}
@@ -118,36 +119,36 @@ local VERSION_ValidRaid = 4
 -----------------------
 -- Debug Functions --
 -----------------------
---@debug@
-function DBG_dump(o)
-	if type(o) == 'table' then
-		local s = '{ '
-		for k, v in pairs(o) do
-			if type(k) ~= 'number' then k = '"' .. k .. '"' end
-			s = s .. '[' .. k .. '] = ' .. DBG_dump(v) .. ','
-		end
-		return s .. '} '
-	else
-		return tostring(o)
-	end
-end
+-- --@debug@
+-- function DBG_dump(o)
+-- 	if type(o) == 'table' then
+-- 		local s = '{ '
+-- 		for k, v in pairs(o) do
+-- 			if type(k) ~= 'number' then k = '"' .. k .. '"' end
+-- 			s = s .. '[' .. k .. '] = ' .. DBG_dump(v) .. ','
+-- 		end
+-- 		return s .. '} '
+-- 	else
+-- 		return tostring(o)
+-- 	end
+-- end
 
---@end-debug@
+-- --@end-debug@
 
---@alpha@
-local dbgMessageShown = false
-local function dbg(msg, data)
-	if ViragDevTool_AddData then
-		ViragDevTool_AddData(data, msg)
-	else
-		if not dbgMessageShown then
-			print(
-				"Please install ViragDevTool from http://mods.curse.com/addons/wow/varrendevtool to view debug info for Angry Sparks.")
-			dbgMessageShown = true
-		end
-	end
-end
---@end-alpha@
+-- --@alpha@
+-- local dbgMessageShown = false
+-- local function dbg(msg, data)
+-- 	if ViragDevTool_AddData then
+-- 		ViragDevTool_AddData(data, msg)
+-- 	else
+-- 		if not dbgMessageShown then
+-- 			print(
+-- 				"Please install ViragDevTool from http://mods.curse.com/addons/wow/varrendevtool to view debug info for Angry Sparks.")
+-- 			dbgMessageShown = true
+-- 		end
+-- 	end
+-- end
+-- --@end-alpha@
 
 -------------------------
 -- Addon Communication --
@@ -184,7 +185,7 @@ function AngrySparks:SendOutMessage(data, channel, target)
 	if not channel then return end
 
 	--@alpha@
-	dbg("AG Send Message " .. data[COMMAND], { target, channel, data, string.len(encoded) })
+	-- dbg("AG Send Message " .. data[COMMAND], { target, channel, data, string.len(encoded) })
 	--@end-alpha@
 	self:SendCommMessage(comPrefix, encoded, channel, target, "BULK")
 	return true
@@ -195,7 +196,7 @@ function AngrySparks:ProcessMessage(sender, data)
 	sender = utilsModule:EnsureUnitFullName(sender)
 
 	--@alpha@
-	dbg("AG Process " .. cmd, { sender, data })
+	-- dbg("AG Process " .. cmd, { sender, data })
 	--@end-alpha@
 
 	if cmd == "PAGE" then
@@ -277,7 +278,7 @@ function AngrySparks:ProcessMessage(sender, data)
 
 		self:SendPage(data[REQUEST_PAGE_Id])
 	elseif cmd == "VER_QUERY" then
-		self:SendVersion()
+		self:SendVersion(false)
 	elseif cmd == "VERSION" then
 		local localTimestamp, ver, timestamp
 
@@ -411,6 +412,7 @@ function AngrySparks:SendRequestDisplay()
 	end
 end
 
+---@param force boolean
 function AngrySparks:SendVersion(force)
 	local curTime = time()
 
@@ -419,8 +421,10 @@ function AngrySparks:SendVersion(force)
 			if force then
 				self:SendVersionMessage(id)
 			else
-				versionTimerId = self:ScheduleTimer("SendVersionMessage", updateThrottle - (curTime - versionLastUpdate),
-					id)
+				versionTimerId = self:ScheduleTimer(
+					"SendVersionMessage",
+					updateThrottle - (curTime - versionLastUpdate), id
+				)
 			end
 		elseif force then
 			self:CancelTimer(versionTimerId)
@@ -1891,9 +1895,12 @@ function coreModule:UpdateDisplayed()
 			end)
 			:gsub(utilsModule:Pattern('{icon%s+([%w_]+)}'), "|TInterface\\Icons\\%1:0|t")
 			:gsub(utilsModule:Pattern('{damage}'), "{dps}")
-			:gsub(utilsModule:Pattern('{tank}'), "|TInterface\\LFGFrame\\UI-LFG-ICON-PORTRAITROLES:0:0:0:0:64:64:0:19:22:41|t")
-			:gsub(utilsModule:Pattern('{healer}'), "|TInterface\\LFGFrame\\UI-LFG-ICON-PORTRAITROLES:0:0:0:0:64:64:20:39:1:20|t")
-			:gsub(utilsModule:Pattern('{dps}'), "|TInterface\\LFGFrame\\UI-LFG-ICON-PORTRAITROLES:0:0:0:0:64:64:20:39:22:41|t")
+			:gsub(utilsModule:Pattern('{tank}'),
+				"|TInterface\\LFGFrame\\UI-LFG-ICON-PORTRAITROLES:0:0:0:0:64:64:0:19:22:41|t")
+			:gsub(utilsModule:Pattern('{healer}'),
+				"|TInterface\\LFGFrame\\UI-LFG-ICON-PORTRAITROLES:0:0:0:0:64:64:20:39:1:20|t")
+			:gsub(utilsModule:Pattern('{dps}'),
+				"|TInterface\\LFGFrame\\UI-LFG-ICON-PORTRAITROLES:0:0:0:0:64:64:20:39:22:41|t")
 			:gsub(utilsModule:Pattern('{hunter}'),
 				"|TInterface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES:0:0:0:0:64:64:0:16:16:32|t")
 			:gsub(utilsModule:Pattern('{warrior}'),
