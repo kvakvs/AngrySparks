@@ -42,7 +42,9 @@
         "Settings",
         "UIDropDownMenu_Initialize",
         "ToggleDropDownMenu",
-        "UIDropDownMenu_AddButton"
+        "UIDropDownMenu_AddButton",
+        "StaticPopupDialogs",
+        "RED_FONT_COLOR_CODE"
     ],
     "Lua.diagnostics.disable": [
         "assign-type-mismatch"

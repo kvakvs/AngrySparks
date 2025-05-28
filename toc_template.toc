@@ -12,9 +12,13 @@
 
 embeds.xml
 
+Src/Stubs.lua
 Src/Core.lua
 Src/TreeGroup.lua
 Src/EasyMenu.lua
+Src/UiDisplay.lua
+Src/Utils.lua
+Src/Config.lua
 
 #
 # Do not edit - this file is generated from TOC_TEMPLATE.TOC

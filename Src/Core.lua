@@ -1,7 +1,27 @@
+---@class AngrySparksAddon: AceAddon
+---@field display_text Frame
+---@field backdrop Texture
+---@field clickOverlay Frame
+---@field pagination Frame
+---@field paginationText FontString
+---@field mover Frame
+---@field direction_button Button
+---@field display_glow Texture
+---@field display_glow2 Texture
 local AngrySparks = LibStub("AceAddon-3.0"):NewAddon(
 	"AngrySparks",
 	"AceConsole-3.0", "AceEvent-3.0", "AceComm-3.0", "AceTimer-3.0"
 )
+
+---@class CoreModule
+---@field addon AngrySparksAddon
+local coreModule = LibStub("AngrySparks-Core") --[[@as CoreModule]]
+coreModule.addon = AngrySparks
+
+local uiDisplayModule = LibStub("AngrySparks-Ui-Display") --[[@as UiDisplayModule]]
+local utilsModule = LibStub("AngrySparks-Utils") --[[@as UtilsModule]]
+local configModule = LibStub("AngrySparks-Config") --[[@as ConfigModule]]
+
 local AceGUI = LibStub("AceGUI-3.0")
 local lwin = LibStub("LibWindow-1.1")
 local LSM = LibStub("LibSharedMedia-3.0")
@@ -96,7 +116,7 @@ local VERSION_Timestamp = 3
 local VERSION_ValidRaid = 4
 
 -----------------------
--- Utility Functions --
+-- Debug Functions --
 -----------------------
 --@debug@
 function DBG_dump(o)
@@ -128,84 +148,6 @@ local function dbg(msg, data)
 	end
 end
 --@end-alpha@
-
-local function explode(seperator, content)
-	local t, position
-	t = {}
-	position = 0
-	if (#content == 1) then
-		return { content }
-	end
-	while true do
-		local idx = string.find(content, seperator, position, true) -- find the next seperator in the string
-		if idx ~= nil then                                    -- if "not not" found then..
-			table.insert(t, string.sub(content, position, idx - 1)) -- Save it in our array.
-			position = idx +
-				#seperator                                    -- save just after where we found it for searching next time.
-		else
-			table.insert(t, string.sub(content, position))    -- Save what's left in our array.
-			break                                             -- Break at end, as it should be, according to the lua manual.
-		end
-	end
-	return t
-end
-
-local function selectedLastValue(input)
-	local a = select(-1, strsplit("", input or ""))
-	return tonumber(a)
-end
-
-local function tReverse(tbl)
-	for i = 1, math.floor(#tbl / 2) do
-		tbl[i], tbl[#tbl - i + 1] = tbl[#tbl - i + 1], tbl[i]
-	end
-end
-
-local _player_realm = nil
-local function EnsureUnitFullName(unit)
-	if not _player_realm then _player_realm = select(2, UnitFullName('player')) end
-	if unit and not unit:find('-') then
-		unit = unit .. '-' .. _player_realm
-	end
-	return unit
-end
-
-local function EnsureUnitShortName(unit)
-	if not _player_realm then _player_realm = select(2, UnitFullName('player')) end
-	local name, realm = strsplit("-", unit, 2)
-	if not realm or realm == _player_realm then
-		return name
-	else
-		return unit
-	end
-end
-
-local function PlayerFullName()
-	if not _player_realm then _player_realm = select(2, UnitFullName('player')) end
-	return UnitName('player') .. '-' .. _player_realm
-end
-
-local function RGBToHex(r, g, b, a)
-	r = math.ceil(255 * r)
-	g = math.ceil(255 * g)
-	b = math.ceil(255 * b)
-	if a == nil then
-		return string.format("%02x%02x%02x", r, g, b)
-	else
-		a = math.ceil(255 * a)
-		return string.format("%02x%02x%02x%02x", r, g, b, a)
-	end
-end
-
-local function HexToRGB(hex)
-	if string.len(hex) == 8 then
-		return tonumber("0x" .. hex:sub(1, 2)) / 255, tonumber("0x" .. hex:sub(3, 4)) / 255,
-			tonumber("0x" .. hex:sub(5, 6)) / 255, tonumber("0x" .. hex:sub(7, 8)) / 255
-	else
-		return tonumber("0x" .. hex:sub(1, 2)) / 255, tonumber("0x" .. hex:sub(3, 4)) / 255,
-			tonumber("0x" .. hex:sub(5, 6)) / 255
-	end
-end
 
 -------------------------
 -- Addon Communication --
@@ -250,14 +192,14 @@ end
 
 function AngrySparks:ProcessMessage(sender, data)
 	local cmd = data[COMMAND]
-	sender = EnsureUnitFullName(sender)
+	sender = utilsModule:EnsureUnitFullName(sender)
 
 	--@alpha@
 	dbg("AG Process " .. cmd, { sender, data })
 	--@end-alpha@
 
 	if cmd == "PAGE" then
-		if sender == PlayerFullName() then return end
+		if sender == utilsModule:PlayerFullName() then return end
 		if not self:PermissionCheck(sender) then
 			self:PermissionCheckFailError(sender)
 			return
@@ -295,14 +237,14 @@ function AngrySparks:ProcessMessage(sender, data)
 		end
 
 		if AngrySparks_State.displayed == id then
-			self:UpdateDisplayed()
+			coreModule:UpdateDisplayed()
 			self:ShowDisplay()
 			if contents_updated then self:DisplayUpdateNotification() end
 		end
 
 		self:UpdateTree()
 	elseif cmd == "DISPLAY" then
-		if sender == PlayerFullName() then return end
+		if sender == utilsModule:PlayerFullName() then return end
 		if not self:PermissionCheck(sender) then
 			if data[DISPLAY_Id] then self:PermissionCheckFailError(sender) end
 			return
@@ -321,17 +263,17 @@ function AngrySparks:ProcessMessage(sender, data)
 		if AngrySparks_State.displayed ~= id then
 			AngrySparks_State.displayed = id
 			self:UpdateTree()
-			self:UpdateDisplayed()
+			coreModule:UpdateDisplayed()
 			self:ShowDisplay()
 			if id then self:DisplayUpdateNotification() end
 		end
 	elseif cmd == "REQUEST_DISPLAY" then
-		if sender == PlayerFullName() then return end
+		if sender == utilsModule:PlayerFullName() then return end
 		if not self:IsPlayerRaidLeader() then return end
 
 		self:SendDisplay(AngrySparks_State.displayed)
 	elseif cmd == "REQUEST_PAGE" then
-		if sender == PlayerFullName() then return end
+		if sender == utilsModule:PlayerFullName() then return end
 
 		self:SendPage(data[REQUEST_PAGE_Id])
 	elseif cmd == "VER_QUERY" then
@@ -528,7 +470,7 @@ function AngrySparks:GetRaidLeader(online_only)
 			local name, rank, subgroup, level, class, fileName, zone, online, isDead, role, isML = GetRaidRosterInfo(i)
 			if rank == 2 then
 				if (not online_only) or online then
-					return EnsureUnitFullName(name)
+					return utilsModule:EnsureUnitFullName(name)
 				else
 					return nil
 				end
@@ -539,11 +481,11 @@ function AngrySparks:GetRaidLeader(online_only)
 end
 
 function AngrySparks:GetCurrentGroup()
-	local player = PlayerFullName()
+	local player = utilsModule:PlayerFullName()
 	if (IsInRaid() or IsInGroup()) then
 		for i = 1, GetNumGroupMembers() do
 			local name, _, subgroup = GetRaidRosterInfo(i)
-			if EnsureUnitFullName(name) == player then
+			if utilsModule:EnsureUnitFullName(name) == player then
 				return subgroup
 			end
 		end
@@ -563,7 +505,7 @@ function AngrySparks:VersionCheckOutput()
 	if (IsInRaid() or IsInGroup()) then
 		for i = 1, GetNumGroupMembers() do
 			local name, _, _, _, _, _, _, online = GetRaidRosterInfo(i)
-			local fullname = EnsureUnitFullName(name)
+			local fullname = utilsModule:EnsureUnitFullName(name)
 			if online then
 				if not versionList[fullname] then
 					tinsert(missing_addon, name)
@@ -804,7 +746,7 @@ function AngrySparks:DisplayPage(id)
 
 	if AngrySparks_State.displayed ~= id then
 		AngrySparks_State.displayed = id
-		AngrySparks:UpdateDisplayed()
+		coreModule:UpdateDisplayed()
 		AngrySparks:ShowDisplay()
 		AngrySparks:UpdateTree()
 		AngrySparks:DisplayUpdateNotification()
@@ -951,7 +893,7 @@ end
 local AngrySparks_DropDown
 local function AngrySparks_TreeClick(widget, event, value, selected, button)
 	HideDropDownMenu(1)
-	local selectedId = selectedLastValue(value)
+	local selectedId = utilsModule:SelectedLastValue(value)
 	if selectedId < 0 then
 		if button == "RightButton" then
 			if not AngrySparks_DropDown then
@@ -981,7 +923,7 @@ function AngrySparks:CreateWindow()
 	window:SetTitle("Angry Sparks")
 	window:SetStatusText("")
 	window:SetLayout("Flow")
-	if AngrySparks:GetConfig('scale') then window.frame:SetScale(AngrySparks:GetConfig('scale')) end
+	if configModule:GetConfig('scale') then window.frame:SetScale(configModule:GetConfig('scale')) end
 	window:SetStatusTable(AngrySparks_State.window)
 	window:Hide()
 	AngrySparks.window = window
@@ -1135,7 +1077,7 @@ function AngrySparks:CreateWindow()
 	window.button_clear = button_clear
 
 	self:UpdateSelected(true)
-	self:UpdateMedia()
+	coreModule:UpdateMedia()
 
 	self:CreateVariablesWindow()
 end
@@ -1155,7 +1097,7 @@ function AngrySparks:CreateVariablesWindow()
 	window.frame:SetFrameStrata("HIGH")
 	window.frame:SetFrameLevel(1)
 	window.frame:SetClampedToScreen(true)
-	if AngrySparks:GetConfig('scale') then window.frame:SetScale(AngrySparks:GetConfig('scale')) end
+	if configModule:GetConfig('scale') then window.frame:SetScale(configModule:GetConfig('scale')) end
 
 	AngrySparks.variablesWindow = window
 
@@ -1181,7 +1123,7 @@ function AngrySparks:CreateVariablesWindow()
 			self:RehashPage(id)
 			AngrySparks:DisplayPage(id)
 			if AngrySparks_State.displayed == id then
-				self:UpdateDisplayed()
+				coreModule:UpdateDisplayed()
 			end
 		end
 	end)
@@ -1351,7 +1293,7 @@ end
 ----------------------------------
 
 function AngrySparks:SelectedId()
-	return selectedLastValue(AngrySparks_State.tree.selected)
+	return utilsModule:SelectedLastValue(AngrySparks_State.tree.selected)
 end
 
 function AngrySparks:SetSelectedId(selectedId)
@@ -1368,7 +1310,7 @@ function AngrySparks:SetSelectedId(selectedId)
 					cat = nil
 				end
 			end
-			tReverse(path)
+			utilsModule:TReverse(path)
 			table.insert(path, page.Id)
 			self.window.tree:SelectByPath(unpack(path))
 		else
@@ -1427,7 +1369,7 @@ function AngrySparks:RenamePage(id, name)
 	self:SendPage(id, true)
 	self:UpdateTree()
 	if AngrySparks_State.displayed == id then
-		self:UpdateDisplayed()
+		coreModule:UpdateDisplayed()
 		self:ShowDisplay()
 	end
 end
@@ -1550,7 +1492,7 @@ function AngrySparks:UpdateContents(id, value)
 	self:SendPage(id, true)
 	self:UpdateSelected(true)
 	if AngrySparks_State.displayed == id then
-		self:UpdateDisplayed()
+		coreModule:UpdateDisplayed()
 		self:ShowDisplay()
 		if contents_updated then self:DisplayUpdateNotification() end
 	end
@@ -1565,13 +1507,13 @@ end
 
 function AngrySparks:ClearDisplayed()
 	AngrySparks_State.displayed = nil
-	self:UpdateDisplayed()
+	coreModule:UpdateDisplayed()
 	self:UpdateTree()
 end
 
 function AngrySparks:IsPlayerRaidLeader()
 	local leader = self:GetRaidLeader()
-	return leader and PlayerFullName() == EnsureUnitFullName(leader)
+	return leader and utilsModule:PlayerFullName() == utilsModule:EnsureUnitFullName(leader)
 end
 
 function AngrySparks:IsGuildRaid()
@@ -1584,7 +1526,7 @@ function AngrySparks:IsGuildRaid()
 		for i = 1, scanTotal do
 			local name = GetGuildRosterInfo(i)
 			if not name then break end
-			name = EnsureUnitFullName(name)
+			name = utilsModule:EnsureUnitFullName(name)
 			if name == leader then
 				return true
 			end
@@ -1595,12 +1537,12 @@ function AngrySparks:IsGuildRaid()
 end
 
 function AngrySparks:IsValidRaid()
-	if self:GetConfig('allowall') then
+	if configModule:GetConfig('allowall') then
 		return true
 	end
 
-	for token in string.gmatch(AngrySparks:GetConfig('allowplayers'), "[^%s!#$%%&()*+,./:;<=>?@\\^_{|}~%[%]]+") do
-		if leader and EnsureUnitFullName(token):lower() == EnsureUnitFullName(leader):lower() then
+	for token in string.gmatch(configModule:GetConfig('allowplayers'), "[^%s!#$%%&()*+,./:;<=>?@\\^_{|}~%[%]]+") do
+		if leader and utilsModule:EnsureUnitFullName(token):lower() == utilsModule:EnsureUnitFullName(leader):lower() then
 			return true
 		end
 	end
@@ -1617,13 +1559,13 @@ function AngrySparks:IsValidRaid()
 end
 
 function AngrySparks:PermissionCheck(sender)
-	if not sender then sender = PlayerFullName() end
+	if not sender then sender = utilsModule:PlayerFullName() end
 
 	if (IsInRaid() or IsInGroup()) then
-		return (UnitIsGroupLeader(EnsureUnitShortName(sender)) == true or UnitIsGroupAssistant(EnsureUnitShortName(sender)) == true) and
+		return (UnitIsGroupLeader(utilsModule:EnsureUnitShortName(sender)) == true or UnitIsGroupAssistant(utilsModule:EnsureUnitShortName(sender)) == true) and
 			self:IsValidRaid()
 	else
-		return sender == PlayerFullName()
+		return sender == utilsModule:PlayerFullName()
 	end
 end
 
@@ -1641,21 +1583,6 @@ end
 -- Displaying Page --
 ---------------------
 
-local function DragHandle_MouseDown(frame) frame:GetParent():GetParent():StartSizing("RIGHT") end
-local function DragHandle_MouseUp(frame)
-	local display = frame:GetParent():GetParent()
-	display:StopMovingOrSizing()
-	AngrySparks_State.display.width = display:GetWidth()
-	lwin.SavePosition(display)
-	AngrySparks:SyncTextSizeFrames()
-end
-local function Mover_MouseDown(frame) frame:GetParent():StartMoving() end
-local function Mover_MouseUp(frame)
-	local display = frame:GetParent()
-	display:StopMovingOrSizing()
-	lwin.SavePosition(display)
-end
-
 function AngrySparks:ResetPosition()
 	AngrySparks_State.display = {}
 	AngrySparks_State.directionUp = false
@@ -1668,7 +1595,7 @@ function AngrySparks:ResetPosition()
 	lwin.RegisterConfig(self.frame, AngrySparks_State.display)
 	lwin.RestorePosition(self.frame)
 
-	self:UpdateDirection()
+	coreModule:UpdateDirection()
 end
 
 function AngrySparks_ToggleDisplay()
@@ -1708,147 +1635,7 @@ function AngrySparks:Paginate(direction)
 	else
 		AngrySparks_State.currentPage = AngrySparks_State.currentPage - 1
 	end
-	self:UpdateDisplayed()
-end
-
-function AngrySparks:CreateDisplay()
-	local frame = CreateFrame("Frame", "AngryAss", UIParent)
-	frame:SetPoint("CENTER", 0, 0)
-	frame:SetWidth(AngrySparks_State.display.width or 300)
-	frame:SetHeight(1)
-	frame:SetMovable(true)
-	frame:SetResizable(true)
-	frame:SetClampedToScreen(true)
-	if frame.SetResizeBounds then
-		frame:SetResizeBounds(180, 1, 830, 1)
-	else
-		frame:SetMinResize(180, 1)
-		frame:SetMaxResize(830, 1)
-	end
-	frame:SetFrameStrata("MEDIUM")
-	self.frame = frame
-
-	lwin.RegisterConfig(frame, AngrySparks_State.display)
-	lwin.RestorePosition(frame)
-
-	local text = CreateFrame("ScrollingMessageFrame", "AngryAssScrollingMessage", frame)
-	text:SetIndentedWordWrap(true)
-	text:SetJustifyH("LEFT")
-	text:SetFading(false)
-	text:SetMaxLines(70)
-	text:SetHeight(700)
-	text:SetHyperlinksEnabled(false)
-	self.display_text = text
-
-	local backdrop = text:CreateTexture()
-	backdrop:SetDrawLayer("BACKGROUND")
-	self.backdrop = backdrop
-
-	local clickOverlay = CreateFrame("Frame", "AngryAssClickOverlay", text)
-	clickOverlay:SetAllPoints(text)
-	clickOverlay:SetScript("OnMouseDown", function(_, button)
-		local direction
-		if button == "LeftButton" then
-			direction = "forward"
-		else
-			direction = "backward"
-		end
-		AngrySparks:Paginate(direction)
-	end)
-	self.clickOverlay = clickOverlay
-
-	local pagination = CreateFrame("Frame", "AngryAssPagination", clickOverlay)
-	pagination:SetPoint("TOPRIGHT", -4, -4)
-	pagination:SetHeight(1)
-	pagination:SetWidth(1)
-	self.pagination = pagination
-
-	local paginationText = pagination:CreateFontString()
-	local fontName = LSM:Fetch("font", AngrySparks:GetConfig('fontName') --[[@as string]])
-	local fontHeight = AngrySparks:GetConfig('fontHeight')
-	local fontFlags = AngrySparks:GetConfig('fontFlags')
-
-	paginationText:SetTextColor(HexToRGB(self:GetConfig('color')))
-	paginationText:SetFont(fontName, fontHeight, fontFlags)
-	paginationText:SetPoint("TOPRIGHT")
-	self.paginationText = paginationText
-
-	local mover = CreateFrame("Frame", "AngryAssMover", frame, BackdropTemplateMixin and "BackdropTemplate" or nil)
-	mover:SetFrameLevel(clickOverlay:GetFrameLevel() + 10)
-	mover:SetPoint("LEFT", 0, 0)
-	mover:SetPoint("RIGHT", 0, 0)
-	mover:SetHeight(16)
-	mover:EnableMouse(true)
-	mover:SetBackdrop({ bgFile = "Interface\\Tooltips\\UI-Tooltip-Background" })
-	mover:SetBackdropColor(0.616, 0.149, 0.114, 0.9)
-	mover:SetScript("OnMouseDown", Mover_MouseDown)
-	mover:SetScript("OnMouseUp", Mover_MouseUp)
-	self.mover = mover
-	if AngrySparks_State.locked then mover:Hide() end
-
-	local label = mover:CreateFontString()
-	label:SetFontObject("GameFontNormal")
-	label:SetJustifyH("CENTER")
-	label:SetPoint("LEFT", 38, 0)
-	label:SetPoint("RIGHT", -38, 0)
-	label:SetText("Angry Sparks")
-
-	local direction = CreateFrame("Button", "AngryAssDirection", mover)
-	direction:SetPoint("LEFT", 2, 0)
-	direction:SetWidth(16)
-	direction:SetHeight(16)
-	direction:SetNormalTexture("Interface\\Buttons\\UI-Panel-QuestHideButton")
-	direction:SetPushedTexture("Interface\\Buttons\\UI-Panel-QuestHideButton")
-	direction:SetHighlightTexture("Interface\\Buttons\\UI-Panel-MinimizeButton-Highlight", "ADD")
-	direction:SetScript("OnClick", function() AngrySparks:ToggleDirection() end)
-	self.direction_button = direction
-
-	local lock = CreateFrame("Button", "AngryAssLock", mover)
-	lock:SetNormalTexture("Interface\\LFGFRAME\\UI-LFG-ICON-LOCK")
-	lock:GetNormalTexture():SetTexCoord(0, 0.71875, 0, 0.875)
-	lock:SetPoint("LEFT", direction, "RIGHT", 4, 0)
-	lock:SetWidth(12)
-	lock:SetHeight(14)
-	lock:SetScript("OnClick", function() AngrySparks:ToggleLock() end)
-
-	local drag = CreateFrame("Frame", "AngryAssDrag", mover)
-	drag:SetFrameLevel(mover:GetFrameLevel() + 10)
-	drag:SetWidth(16)
-	drag:SetHeight(16)
-	drag:SetPoint("BOTTOMRIGHT", 0, 0)
-	drag:EnableMouse(true)
-	drag:SetScript("OnMouseDown", DragHandle_MouseDown)
-	drag:SetScript("OnMouseUp", DragHandle_MouseUp)
-	drag:SetAlpha(0.5)
-
-	local dragtex = drag:CreateTexture(nil, "OVERLAY")
-	dragtex:SetTexture("Interface\\AddOns\\AngryGirls\\Textures\\draghandle")
-	dragtex:SetWidth(16)
-	dragtex:SetHeight(16)
-	dragtex:SetBlendMode("ADD")
-	dragtex:SetPoint("CENTER", drag)
-
-	local glow = text:CreateTexture()
-	glow:SetDrawLayer("BORDER")
-	glow:SetTexture("Interface\\AddOns\\AngryGirls\\Textures\\LevelUpTex")
-	glow:SetSize(223, 115)
-	glow:SetTexCoord(0.56054688, 0.99609375, 0.24218750, 0.46679688)
-	glow:SetVertexColor(HexToRGB(self:GetConfig('glowColor')))
-	glow:SetAlpha(0)
-	self.display_glow = glow
-
-	local glow2 = text:CreateTexture()
-	glow2:SetDrawLayer("BORDER")
-	glow2:SetTexture("Interface\\AddOns\\AngryGirls\\Textures\\LevelUpTex")
-	glow2:SetSize(418, 7)
-	glow2:SetTexCoord(0.00195313, 0.81835938, 0.01953125, 0.03320313)
-	glow2:SetVertexColor(HexToRGB(self:GetConfig('glowColor')))
-	glow2:SetAlpha(0)
-	self.display_glow2 = glow2
-
-	if AngrySparks_State.display.hidden then text:Hide() end
-	self:UpdateMedia()
-	self:UpdateDirection()
+	coreModule:UpdateDisplayed()
 end
 
 function AngrySparks:ToggleLock()
@@ -1862,42 +1649,42 @@ end
 
 function AngrySparks:ToggleDirection()
 	AngrySparks_State.directionUp = not AngrySparks_State.directionUp
-	self:UpdateDirection()
+	coreModule:UpdateDirection()
 end
 
-function AngrySparks:UpdateDirection()
+function coreModule:UpdateDirection()
 	if AngrySparks_State.directionUp then
-		self.display_text:ClearAllPoints()
-		self.display_text:SetPoint("BOTTOMLEFT", 0, 8)
-		self.display_text:SetPoint("RIGHT", 0, 0)
-		self.display_text:SetInsertMode(SCROLLING_MESSAGE_FRAME_INSERT_MODE_BOTTOM)
-		self.direction_button:GetNormalTexture():SetTexCoord(0, 0.5, 0.5, 1)
-		self.direction_button:GetPushedTexture():SetTexCoord(0.5, 1, 0.5, 1)
+		AngrySparks.display_text:ClearAllPoints()
+		AngrySparks.display_text:SetPoint("BOTTOMLEFT", 0, 8)
+		AngrySparks.display_text:SetPoint("RIGHT", 0, 0)
+		AngrySparks.display_text:SetInsertMode(SCROLLING_MESSAGE_FRAME_INSERT_MODE_BOTTOM)
+		AngrySparks.direction_button:GetNormalTexture():SetTexCoord(0, 0.5, 0.5, 1)
+		AngrySparks.direction_button:GetPushedTexture():SetTexCoord(0.5, 1, 0.5, 1)
 
-		self.display_glow:ClearAllPoints()
-		self.display_glow:SetPoint("BOTTOM", 0, -4)
-		self.display_glow:SetTexCoord(0.56054688, 0.99609375, 0.24218750, 0.46679688)
-		self.display_glow2:ClearAllPoints()
-		self.display_glow2:SetPoint("TOP", self.display_glow, "BOTTOM", 0, 6)
+		AngrySparks.display_glow:ClearAllPoints()
+		AngrySparks.display_glow:SetPoint("BOTTOM", 0, -4)
+		AngrySparks.display_glow:SetTexCoord(0.56054688, 0.99609375, 0.24218750, 0.46679688)
+		AngrySparks.display_glow2:ClearAllPoints()
+		AngrySparks.display_glow2:SetPoint("TOP", self.display_glow, "BOTTOM", 0, 6)
 	else
-		self.display_text:ClearAllPoints()
-		self.display_text:SetPoint("TOPLEFT", 0, -8)
-		self.display_text:SetPoint("RIGHT", 0, 0)
-		self.display_text:SetInsertMode(SCROLLING_MESSAGE_FRAME_INSERT_MODE_TOP)
-		self.direction_button:GetNormalTexture():SetTexCoord(0, 0.5, 0, 0.5)
-		self.direction_button:GetPushedTexture():SetTexCoord(0.5, 1, 0, 0.5)
+		AngrySparks.display_text:ClearAllPoints()
+		AngrySparks.display_text:SetPoint("TOPLEFT", 0, -8)
+		AngrySparks.display_text:SetPoint("RIGHT", 0, 0)
+		AngrySparks.display_text:SetInsertMode(SCROLLING_MESSAGE_FRAME_INSERT_MODE_TOP)
+		AngrySparks.direction_button:GetNormalTexture():SetTexCoord(0, 0.5, 0, 0.5)
+		AngrySparks.direction_button:GetPushedTexture():SetTexCoord(0.5, 1, 0, 0.5)
 
-		self.display_glow:ClearAllPoints()
-		self.display_glow:SetPoint("TOP", 0, 4)
-		self.display_glow:SetTexCoord(0.56054688, 0.99609375, 0.46679688, 0.24218750)
-		self.display_glow2:ClearAllPoints()
-		self.display_glow2:SetPoint("BOTTOM", self.display_glow, "TOP", 0, 0)
+		AngrySparks.display_glow:ClearAllPoints()
+		AngrySparks.display_glow:SetPoint("TOP", 0, 4)
+		AngrySparks.display_glow:SetTexCoord(0.56054688, 0.99609375, 0.46679688, 0.24218750)
+		AngrySparks.display_glow2:ClearAllPoints()
+		AngrySparks.display_glow2:SetPoint("BOTTOM", self.display_glow, "TOP", 0, 0)
 	end
-	if self.display_text:IsShown() then
-		self.display_text:Hide()
-		self.display_text:Show()
+	if AngrySparks.display_text:IsShown() then
+		AngrySparks.display_text:Hide()
+		AngrySparks.display_text:Show()
 	end
-	self:UpdateDisplayed()
+	coreModule:UpdateDisplayed()
 end
 
 function AngrySparks:SyncTextSizeFrames()
@@ -1931,7 +1718,7 @@ function AngrySparks:ResizeClickOverlay(first, last)
 end
 
 function AngrySparks:ResizeBackdrop(first, last)
-	if first and last and self:GetConfig('backdropShow') then
+	if first and last and configModule:GetConfig('backdropShow') then
 		self.backdrop:ClearAllPoints()
 		if AngrySparks_State.directionUp then
 			self.backdrop:SetPoint("TOPLEFT", last, "TOPLEFT", -4, 4)
@@ -1940,7 +1727,7 @@ function AngrySparks:ResizeBackdrop(first, last)
 			self.backdrop:SetPoint("TOPLEFT", first, "TOPLEFT", -4, 4)
 			self.backdrop:SetPoint("BOTTOMRIGHT", last, "BOTTOMRIGHT", 4, -4)
 		end
-		self.backdrop:SetColorTexture(HexToRGB(self:GetConfig('backdropColor')))
+		self.backdrop:SetColorTexture(utilsModule:HexToRGB(configModule:GetConfig('backdropColor')))
 		self.backdrop:Show()
 	else
 		self.backdrop:Hide()
@@ -1948,27 +1735,32 @@ function AngrySparks:ResizeBackdrop(first, last)
 end
 
 local editFontName, editFontHeight, editFontFlags
-function AngrySparks:UpdateMedia()
-	local fontName = LSM:Fetch("font", AngrySparks:GetConfig('fontName'))
-	local fontHeight = AngrySparks:GetConfig('fontHeight')
-	local fontFlags = AngrySparks:GetConfig('fontFlags')
+function coreModule:UpdateMedia()
+	local fontName = LSM:Fetch("font", configModule:GetConfig('fontName'))
+	local fontHeight = configModule:GetConfig('fontHeight')
+	local fontFlags = configModule:GetConfig('fontFlags')
 
-	self.display_text:SetTextColor(HexToRGB(self:GetConfig('color')))
-	self.display_text:SetFont(fontName, fontHeight, fontFlags)
-	self.display_text:SetSpacing(AngrySparks:GetConfig('lineSpacing'))
+	AngrySparks.display_text:SetTextColor(utilsModule:HexToRGB(configModule:GetConfig('color')))
+	AngrySparks.display_text:SetFont(fontName, fontHeight, fontFlags)
+	AngrySparks.display_text:SetSpacing(configModule:GetConfig('lineSpacing'))
 
-	if self.window then
-		if self:GetConfig('editBoxFont') then
+	if AngrySparks.window then
+		if configModule:GetConfig('editBoxFont') then
 			if not editFontName then
-				editFontName, editFontHeight, editFontFlags = self.window.text.editBox:GetFont()
+				editFontName, editFontHeight, editFontFlags = AngrySparks.window.text.editBox:GetFont()
 			end
-			self.window.text.editBox:SetFont(fontName, fontHeight, fontFlags)
+			AngrySparks.window.text.editBox:SetFont(fontName, fontHeight, fontFlags)
 		elseif editFontName then
-			self.window.text.editBox:SetFont(editFontName, editFontHeight, editFontFlags)
+			AngrySparks.window.text.editBox:SetFont(editFontName, editFontHeight, editFontFlags)
 		end
 	end
 
-	self:SyncTextSizeFrames()
+	AngrySparks:SyncTextSizeFrames()
+end
+
+---Used by the LibSharedMedia (LSM) callback registration
+function AngrySparks:UpdateMedia()
+	coreModule:UpdateMedia()
 end
 
 local updateFlasher, updateFlasher2 = nil, nil
@@ -2018,22 +1810,11 @@ function AngrySparks:DisplayUpdateNotification()
 	updateFlasher2:Play()
 end
 
-local function ci_pattern(pattern)
-	local p = pattern:gsub("(%%?)(.)", function(percent, letter)
-		if percent ~= "" or not letter:match("%a") then
-			return percent .. letter
-		else
-			return string.format("[%s%s]", letter:lower(), letter:upper())
-		end
-	end)
-	return p
-end
-
 function AngrySparks:UpdateDisplayedIfNewGroup()
 	local newGroup = self:GetCurrentGroup()
 	if newGroup ~= currentGroup then
 		currentGroup = newGroup
-		self:UpdateDisplayed()
+		coreModule:UpdateDisplayed()
 	end
 end
 
@@ -2045,13 +1826,13 @@ function AngrySparks:ReplaceVariables(text)
 	return text
 end
 
-function AngrySparks:UpdateDisplayed()
+function coreModule:UpdateDisplayed()
 	local page = AngrySparks_Pages[AngrySparks_State.displayed]
 	if page then
 		local text = page.Contents
 
 		local highlights = {}
-		for token in string.gmatch(AngrySparks:GetConfig('highlight'), "[^%s%p]+") do
+		for token in string.gmatch(configModule:GetConfig('highlight'), "[^%s%p]+") do
 			token = token:lower()
 			if token == 'group' then
 				tinsert(highlights, 'g' .. (currentGroup or 0))
@@ -2060,27 +1841,27 @@ function AngrySparks:UpdateDisplayed()
 			end
 		end
 
-		local highlightHex = self:GetConfig('highlightColor')
+		local highlightHex = configModule:GetConfig('highlightColor')
 
 		text = AngrySparks:ReplaceVariables(text)
 
 		text = text:gsub("||", "|")
-			:gsub(ci_pattern('|cblue'), "|cff00cbf4")
-			:gsub(ci_pattern('|cgreen'), "|cff0adc00")
-			:gsub(ci_pattern('|cred'), "|cffeb310c")
-			:gsub(ci_pattern('|cyellow'), "|cfffaf318")
-			:gsub(ci_pattern('|corange'), "|cffff9d00")
-			:gsub(ci_pattern('|cpink'), "|cfff64c97")
-			:gsub(ci_pattern('|cpurple'), "|cffdc44eb")
-			:gsub(ci_pattern('|cdruid'), "|cffff7d0a")
-			:gsub(ci_pattern('|chunter'), "|cffabd473")
-			:gsub(ci_pattern('|cmage'), "|cff40C7eb")
-			:gsub(ci_pattern('|cpaladin'), "|cfff58cba")
-			:gsub(ci_pattern('|cpriest'), "|cffffffff")
-			:gsub(ci_pattern('|crogue'), "|cfffff569")
-			:gsub(ci_pattern('|cshaman'), "|cff0070de")
-			:gsub(ci_pattern('|cwarlock'), "|cff8787ed")
-			:gsub(ci_pattern('|cwarrior'), "|cffc79c6e")
+			:gsub(utilsModule:Pattern('|cblue'), "|cff00cbf4")
+			:gsub(utilsModule:Pattern('|cgreen'), "|cff0adc00")
+			:gsub(utilsModule:Pattern('|cred'), "|cffeb310c")
+			:gsub(utilsModule:Pattern('|cyellow'), "|cfffaf318")
+			:gsub(utilsModule:Pattern('|corange'), "|cffff9d00")
+			:gsub(utilsModule:Pattern('|cpink'), "|cfff64c97")
+			:gsub(utilsModule:Pattern('|cpurple'), "|cffdc44eb")
+			:gsub(utilsModule:Pattern('|cdruid'), "|cffff7d0a")
+			:gsub(utilsModule:Pattern('|chunter'), "|cffabd473")
+			:gsub(utilsModule:Pattern('|cmage'), "|cff40C7eb")
+			:gsub(utilsModule:Pattern('|cpaladin'), "|cfff58cba")
+			:gsub(utilsModule:Pattern('|cpriest'), "|cffffffff")
+			:gsub(utilsModule:Pattern('|crogue'), "|cfffff569")
+			:gsub(utilsModule:Pattern('|cshaman'), "|cff0070de")
+			:gsub(utilsModule:Pattern('|cwarlock'), "|cff8787ed")
+			:gsub(utilsModule:Pattern('|cwarrior'), "|cffc79c6e")
 			:gsub("([^%s%p]+)", function(word)
 				local word_lower = word:lower()
 				for _, token in ipairs(highlights) do
@@ -2090,76 +1871,76 @@ function AngrySparks:UpdateDisplayed()
 				end
 				return word
 			end)
-			:gsub(ci_pattern('{spell%s+(%d+)}'), function(id)
+			:gsub(utilsModule:Pattern('{spell%s+(%d+)}'), function(id)
 				return GetSpellLink(id)
 			end)
-			:gsub(ci_pattern('{star}'), "{rt1}")
-			:gsub(ci_pattern('{circle}'), "{rt2}")
-			:gsub(ci_pattern('{diamond}'), "{rt3}")
-			:gsub(ci_pattern('{triangle}'), "{rt4}")
-			:gsub(ci_pattern('{moon}'), "{rt5}")
-			:gsub(ci_pattern('{square}'), "{rt6}")
-			:gsub(ci_pattern('{cross}'), "{rt7}")
-			:gsub(ci_pattern('{x}'), "{rt7}")
-			:gsub(ci_pattern('{skull}'), "{rt8}")
-			:gsub(ci_pattern('{rt([1-8])}'), "|TInterface\\TargetingFrame\\UI-RaidTargetingIcon_%1:0|t")
-			:gsub(ci_pattern('{healthstone}'), "{hs}")
-			:gsub(ci_pattern('{hs}'), "|TInterface\\Icons\\INV_Stone_04:0|t")
-			:gsub(ci_pattern('{icon%s+(%d+)}'), function(id)
+			:gsub(utilsModule:Pattern('{star}'), "{rt1}")
+			:gsub(utilsModule:Pattern('{circle}'), "{rt2}")
+			:gsub(utilsModule:Pattern('{diamond}'), "{rt3}")
+			:gsub(utilsModule:Pattern('{triangle}'), "{rt4}")
+			:gsub(utilsModule:Pattern('{moon}'), "{rt5}")
+			:gsub(utilsModule:Pattern('{square}'), "{rt6}")
+			:gsub(utilsModule:Pattern('{cross}'), "{rt7}")
+			:gsub(utilsModule:Pattern('{x}'), "{rt7}")
+			:gsub(utilsModule:Pattern('{skull}'), "{rt8}")
+			:gsub(utilsModule:Pattern('{rt([1-8])}'), "|TInterface\\TargetingFrame\\UI-RaidTargetingIcon_%1:0|t")
+			:gsub(utilsModule:Pattern('{healthstone}'), "{hs}")
+			:gsub(utilsModule:Pattern('{hs}'), "|TInterface\\Icons\\INV_Stone_04:0|t")
+			:gsub(utilsModule:Pattern('{icon%s+(%d+)}'), function(id)
 				return format("|T%s:0|t", select(3, GetSpellInfo(tonumber(id))))
 			end)
-			:gsub(ci_pattern('{icon%s+([%w_]+)}'), "|TInterface\\Icons\\%1:0|t")
-			:gsub(ci_pattern('{damage}'), "{dps}")
-			:gsub(ci_pattern('{tank}'), "|TInterface\\LFGFrame\\UI-LFG-ICON-PORTRAITROLES:0:0:0:0:64:64:0:19:22:41|t")
-			:gsub(ci_pattern('{healer}'), "|TInterface\\LFGFrame\\UI-LFG-ICON-PORTRAITROLES:0:0:0:0:64:64:20:39:1:20|t")
-			:gsub(ci_pattern('{dps}'), "|TInterface\\LFGFrame\\UI-LFG-ICON-PORTRAITROLES:0:0:0:0:64:64:20:39:22:41|t")
-			:gsub(ci_pattern('{hunter}'),
+			:gsub(utilsModule:Pattern('{icon%s+([%w_]+)}'), "|TInterface\\Icons\\%1:0|t")
+			:gsub(utilsModule:Pattern('{damage}'), "{dps}")
+			:gsub(utilsModule:Pattern('{tank}'), "|TInterface\\LFGFrame\\UI-LFG-ICON-PORTRAITROLES:0:0:0:0:64:64:0:19:22:41|t")
+			:gsub(utilsModule:Pattern('{healer}'), "|TInterface\\LFGFrame\\UI-LFG-ICON-PORTRAITROLES:0:0:0:0:64:64:20:39:1:20|t")
+			:gsub(utilsModule:Pattern('{dps}'), "|TInterface\\LFGFrame\\UI-LFG-ICON-PORTRAITROLES:0:0:0:0:64:64:20:39:22:41|t")
+			:gsub(utilsModule:Pattern('{hunter}'),
 				"|TInterface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES:0:0:0:0:64:64:0:16:16:32|t")
-			:gsub(ci_pattern('{warrior}'),
+			:gsub(utilsModule:Pattern('{warrior}'),
 				"|TInterface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES:0:0:0:0:64:64:0:16:0:16|t")
-			:gsub(ci_pattern('{rogue}'),
+			:gsub(utilsModule:Pattern('{rogue}'),
 				"|TInterface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES:0:0:0:0:64:64:32:48:0:16|t")
-			:gsub(ci_pattern('{mage}'),
+			:gsub(utilsModule:Pattern('{mage}'),
 				"|TInterface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES:0:0:0:0:64:64:16:32:0:16|t")
-			:gsub(ci_pattern('{priest}'),
+			:gsub(utilsModule:Pattern('{priest}'),
 				"|TInterface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES:0:0:0:0:64:64:32:48:16:32|t")
-			:gsub(ci_pattern('{warlock}'),
+			:gsub(utilsModule:Pattern('{warlock}'),
 				"|TInterface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES:0:0:0:0:64:64:48:64:16:32|t")
-			:gsub(ci_pattern('{paladin}'),
+			:gsub(utilsModule:Pattern('{paladin}'),
 				"|TInterface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES:0:0:0:0:64:64:0:16:32:48|t")
-			:gsub(ci_pattern('{druid}'),
+			:gsub(utilsModule:Pattern('{druid}'),
 				"|TInterface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES:0:0:0:0:64:64:48:64:0:16|t")
-			:gsub(ci_pattern('{shaman}'),
+			:gsub(utilsModule:Pattern('{shaman}'),
 				"|TInterface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES:0:0:0:0:64:64:16:32:16:32|t")
-			:gsub(ci_pattern('{elemental}'), "|T136048:0|t")
-			:gsub(ci_pattern('{moonkin}'), "|T136096:0|t")
-			:gsub(ci_pattern('{spriest}'), "|T136200:0|t")
+			:gsub(utilsModule:Pattern('{elemental}'), "|T136048:0|t")
+			:gsub(utilsModule:Pattern('{moonkin}'), "|T136096:0|t")
+			:gsub(utilsModule:Pattern('{spriest}'), "|T136200:0|t")
 
 		if not isClassic then
-			text = text:gsub(ci_pattern('|cdeathknight'), "|cffc41f3b")
-				:gsub(ci_pattern('|cmonk'), "|cff00ff96")
-				:gsub(ci_pattern('|cdemonhunter'), "|cffa330c9")
-				:gsub(ci_pattern('{boss%s+(%d+)}'), function(id)
+			text = text:gsub(utilsModule:Pattern('|cdeathknight'), "|cffc41f3b")
+				:gsub(utilsModule:Pattern('|cmonk'), "|cff00ff96")
+				:gsub(utilsModule:Pattern('|cdemonhunter'), "|cffa330c9")
+				:gsub(utilsModule:Pattern('{boss%s+(%d+)}'), function(id)
 					return select(5, EJ_GetEncounterInfo(id))
 				end)
-				:gsub(ci_pattern('{journal%s+(%d+)}'), function(id)
+				:gsub(utilsModule:Pattern('{journal%s+(%d+)}'), function(id)
 					return C_EncounterJournal.GetSectionInfo(id) and C_EncounterJournal.GetSectionInfo(id).link
 				end)
-				:gsub(ci_pattern('{hero}'), "{heroism}")
-				:gsub(ci_pattern('{heroism}'), "|TInterface\\Icons\\ABILITY_Shaman_Heroism:0|t")
-				:gsub(ci_pattern('{bloodlust}'), "{bl}")
-				:gsub(ci_pattern('{bl}'), "|TInterface\\Icons\\SPELL_Nature_Bloodlust:0|t")
-				:gsub(ci_pattern('{deathknight}'),
+				:gsub(utilsModule:Pattern('{hero}'), "{heroism}")
+				:gsub(utilsModule:Pattern('{heroism}'), "|TInterface\\Icons\\ABILITY_Shaman_Heroism:0|t")
+				:gsub(utilsModule:Pattern('{bloodlust}'), "{bl}")
+				:gsub(utilsModule:Pattern('{bl}'), "|TInterface\\Icons\\SPELL_Nature_Bloodlust:0|t")
+				:gsub(utilsModule:Pattern('{deathknight}'),
 					"|TInterface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES:0:0:0:0:64:64:16:32:32:48|t")
-				:gsub(ci_pattern('{monk}'),
+				:gsub(utilsModule:Pattern('{monk}'),
 					"|TInterface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES:0:0:0:0:64:64:32:48:32:48|t")
-				:gsub(ci_pattern('{demonhunter}'),
+				:gsub(utilsModule:Pattern('{demonhunter}'),
 					"|TInterface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES:0:0:0:0:64:64:64:48:32:48|t")
 		end
 
-		self.display_text:Clear()
+		AngrySparks.display_text:Clear()
 
-		local pages = explode("{page}", text)
+		local pages = utilsModule:Explode("{page}", text)
 
 		if pages[AngrySparks_State.currentPage] == nil then
 			if AngrySparks_State.currentPage == nil or AngrySparks_State.currentPage > 1 then
@@ -2180,19 +1961,19 @@ function AngrySparks:UpdateDisplayed()
 				line = lines[lines_count - i + 1]
 			end
 			if line == "" then line = " " end
-			self.display_text:AddMessage(line)
+			AngrySparks.display_text:AddMessage(line)
 		end
 
 		if #pages > 1 then
-			self.paginationText:SetText("(" .. AngrySparks_State.currentPage .. "/" .. #pages .. ")")
-			self.paginationText:Show()
+			AngrySparks.paginationText:SetText("(" .. AngrySparks_State.currentPage .. "/" .. #pages .. ")")
+			AngrySparks.paginationText:Show()
 		else
-			self.paginationText:Hide()
+			AngrySparks.paginationText:Hide()
 		end
 	else
-		self.display_text:Clear()
+		AngrySparks.display_text:Clear()
 	end
-	self:SyncTextSizeFrames()
+	AngrySparks:SyncTextSizeFrames()
 end
 
 function AngrySparks_OutputDisplayed()
@@ -2219,74 +2000,74 @@ function AngrySparks:OutputDisplayed(id)
 		output = AngrySparks:ReplaceVariables(output)
 
 		output = output:gsub("||", "|")
-			:gsub(ci_pattern('|r'), "")
-			:gsub(ci_pattern('|cblue'), "")
-			:gsub(ci_pattern('|cgreen'), "")
-			:gsub(ci_pattern('|cred'), "")
-			:gsub(ci_pattern('|cyellow'), "")
-			:gsub(ci_pattern('|corange'), "")
-			:gsub(ci_pattern('|cpink'), "")
-			:gsub(ci_pattern('|cpurple'), "")
-			:gsub(ci_pattern('|cdruid'), "")
-			:gsub(ci_pattern('|chunter'), "")
-			:gsub(ci_pattern('|cmage'), "")
-			:gsub(ci_pattern('|cpaladin'), "")
-			:gsub(ci_pattern('|cpriest'), "")
-			:gsub(ci_pattern('|crogue'), "")
-			:gsub(ci_pattern('|cshaman'), "")
-			:gsub(ci_pattern('|cwarlock'), "")
-			:gsub(ci_pattern('|cwarrior'), "")
-			:gsub(ci_pattern('|c%w?%w?%w?%w?%w?%w?%w?%w?'), "")
-			:gsub(ci_pattern('{spell%s+(%d+)}'), function(id)
+			:gsub(utilsModule:Pattern('|r'), "")
+			:gsub(utilsModule:Pattern('|cblue'), "")
+			:gsub(utilsModule:Pattern('|cgreen'), "")
+			:gsub(utilsModule:Pattern('|cred'), "")
+			:gsub(utilsModule:Pattern('|cyellow'), "")
+			:gsub(utilsModule:Pattern('|corange'), "")
+			:gsub(utilsModule:Pattern('|cpink'), "")
+			:gsub(utilsModule:Pattern('|cpurple'), "")
+			:gsub(utilsModule:Pattern('|cdruid'), "")
+			:gsub(utilsModule:Pattern('|chunter'), "")
+			:gsub(utilsModule:Pattern('|cmage'), "")
+			:gsub(utilsModule:Pattern('|cpaladin'), "")
+			:gsub(utilsModule:Pattern('|cpriest'), "")
+			:gsub(utilsModule:Pattern('|crogue'), "")
+			:gsub(utilsModule:Pattern('|cshaman'), "")
+			:gsub(utilsModule:Pattern('|cwarlock'), "")
+			:gsub(utilsModule:Pattern('|cwarrior'), "")
+			:gsub(utilsModule:Pattern('|c%w?%w?%w?%w?%w?%w?%w?%w?'), "")
+			:gsub(utilsModule:Pattern('{spell%s+(%d+)}'), function(id)
 				return GetSpellLink(id)
 			end)
-			:gsub(ci_pattern('{star}'), "{rt1}")
-			:gsub(ci_pattern('{circle}'), "{rt2}")
-			:gsub(ci_pattern('{diamond}'), "{rt3}")
-			:gsub(ci_pattern('{triangle}'), "{rt4}")
-			:gsub(ci_pattern('{moon}'), "{rt5}")
-			:gsub(ci_pattern('{square}'), "{rt6}")
-			:gsub(ci_pattern('{cross}'), "{rt7}")
-			:gsub(ci_pattern('{x}'), "{rt7}")
-			:gsub(ci_pattern('{skull}'), "{rt8}")
-			:gsub(ci_pattern('{healthstone}'), "{hs}")
-			:gsub(ci_pattern('{hs}'), 'Healthstone')
-			:gsub(ci_pattern('{icon%s+([%w_]+)}'), '')
-			:gsub(ci_pattern('{damage}'), 'Damage')
-			:gsub(ci_pattern('{tank}'), 'Tanks')
-			:gsub(ci_pattern('{healer}'), 'Healers')
-			:gsub(ci_pattern('{dps}'), 'Damage')
-			:gsub(ci_pattern('{hunter}'), LOCALIZED_CLASS_NAMES_MALE["HUNTER"])
-			:gsub(ci_pattern('{warrior}'), LOCALIZED_CLASS_NAMES_MALE["WARRIOR"])
-			:gsub(ci_pattern('{rogue}'), LOCALIZED_CLASS_NAMES_MALE["ROGUE"])
-			:gsub(ci_pattern('{mage}'), LOCALIZED_CLASS_NAMES_MALE["MAGE"])
-			:gsub(ci_pattern('{priest}'), LOCALIZED_CLASS_NAMES_MALE["PRIEST"])
-			:gsub(ci_pattern('{warlock}'), LOCALIZED_CLASS_NAMES_MALE["WARLOCK"])
-			:gsub(ci_pattern('{paladin}'), LOCALIZED_CLASS_NAMES_MALE["PALADIN"])
-			:gsub(ci_pattern('{druid}'), LOCALIZED_CLASS_NAMES_MALE["DRUID"])
-			:gsub(ci_pattern('{shaman}'), LOCALIZED_CLASS_NAMES_MALE["SHAMAN"])
-			:gsub(ci_pattern('{page}'), "")
-			:gsub(ci_pattern('{elemental}'), "Elemental Shaman")
-			:gsub(ci_pattern('{moonkin}'), "Moonkin")
-			:gsub(ci_pattern('{spriest}'), "Shadow Priest")
+			:gsub(utilsModule:Pattern('{star}'), "{rt1}")
+			:gsub(utilsModule:Pattern('{circle}'), "{rt2}")
+			:gsub(utilsModule:Pattern('{diamond}'), "{rt3}")
+			:gsub(utilsModule:Pattern('{triangle}'), "{rt4}")
+			:gsub(utilsModule:Pattern('{moon}'), "{rt5}")
+			:gsub(utilsModule:Pattern('{square}'), "{rt6}")
+			:gsub(utilsModule:Pattern('{cross}'), "{rt7}")
+			:gsub(utilsModule:Pattern('{x}'), "{rt7}")
+			:gsub(utilsModule:Pattern('{skull}'), "{rt8}")
+			:gsub(utilsModule:Pattern('{healthstone}'), "{hs}")
+			:gsub(utilsModule:Pattern('{hs}'), 'Healthstone')
+			:gsub(utilsModule:Pattern('{icon%s+([%w_]+)}'), '')
+			:gsub(utilsModule:Pattern('{damage}'), 'Damage')
+			:gsub(utilsModule:Pattern('{tank}'), 'Tanks')
+			:gsub(utilsModule:Pattern('{healer}'), 'Healers')
+			:gsub(utilsModule:Pattern('{dps}'), 'Damage')
+			:gsub(utilsModule:Pattern('{hunter}'), LOCALIZED_CLASS_NAMES_MALE["HUNTER"])
+			:gsub(utilsModule:Pattern('{warrior}'), LOCALIZED_CLASS_NAMES_MALE["WARRIOR"])
+			:gsub(utilsModule:Pattern('{rogue}'), LOCALIZED_CLASS_NAMES_MALE["ROGUE"])
+			:gsub(utilsModule:Pattern('{mage}'), LOCALIZED_CLASS_NAMES_MALE["MAGE"])
+			:gsub(utilsModule:Pattern('{priest}'), LOCALIZED_CLASS_NAMES_MALE["PRIEST"])
+			:gsub(utilsModule:Pattern('{warlock}'), LOCALIZED_CLASS_NAMES_MALE["WARLOCK"])
+			:gsub(utilsModule:Pattern('{paladin}'), LOCALIZED_CLASS_NAMES_MALE["PALADIN"])
+			:gsub(utilsModule:Pattern('{druid}'), LOCALIZED_CLASS_NAMES_MALE["DRUID"])
+			:gsub(utilsModule:Pattern('{shaman}'), LOCALIZED_CLASS_NAMES_MALE["SHAMAN"])
+			:gsub(utilsModule:Pattern('{page}'), "")
+			:gsub(utilsModule:Pattern('{elemental}'), "Elemental Shaman")
+			:gsub(utilsModule:Pattern('{moonkin}'), "Moonkin")
+			:gsub(utilsModule:Pattern('{spriest}'), "Shadow Priest")
 
 		if not isClassic then
-			output = output:gsub(ci_pattern('|cdeathknight'), "")
-				:gsub(ci_pattern('|cmonk'), "")
-				:gsub(ci_pattern('|cdemonhunter'), "")
-				:gsub(ci_pattern('{boss%s+(%d+)}'), function(id)
+			output = output:gsub(utilsModule:Pattern('|cdeathknight'), "")
+				:gsub(utilsModule:Pattern('|cmonk'), "")
+				:gsub(utilsModule:Pattern('|cdemonhunter'), "")
+				:gsub(utilsModule:Pattern('{boss%s+(%d+)}'), function(id)
 					return select(5, EJ_GetEncounterInfo(id))
 				end)
-				:gsub(ci_pattern('{journal%s+(%d+)}'), function(id)
+				:gsub(utilsModule:Pattern('{journal%s+(%d+)}'), function(id)
 					return C_EncounterJournal.GetSectionInfo(id) and C_EncounterJournal.GetSectionInfo(id).link
 				end)
-				:gsub(ci_pattern('{bloodlust}'), "{bl}")
-				:gsub(ci_pattern('{bl}'), 'Bloodlust')
-				:gsub(ci_pattern('{hero}'), "{heroism}")
-				:gsub(ci_pattern('{heroism}'), 'Heroism')
-				:gsub(ci_pattern('{deathknight}'), LOCALIZED_CLASS_NAMES_MALE["DEATHKNIGHT"])
-				:gsub(ci_pattern('{monk}'), LOCALIZED_CLASS_NAMES_MALE["MONK"])
-				:gsub(ci_pattern('{demonhunter}'), LOCALIZED_CLASS_NAMES_MALE["DEMONHUNTER"])
+				:gsub(utilsModule:Pattern('{bloodlust}'), "{bl}")
+				:gsub(utilsModule:Pattern('{bl}'), 'Bloodlust')
+				:gsub(utilsModule:Pattern('{hero}'), "{heroism}")
+				:gsub(utilsModule:Pattern('{heroism}'), 'Heroism')
+				:gsub(utilsModule:Pattern('{deathknight}'), LOCALIZED_CLASS_NAMES_MALE["DEATHKNIGHT"])
+				:gsub(utilsModule:Pattern('{monk}'), LOCALIZED_CLASS_NAMES_MALE["MONK"])
+				:gsub(utilsModule:Pattern('{demonhunter}'), LOCALIZED_CLASS_NAMES_MALE["DEMONHUNTER"])
 		end
 
 		local lines = { strsplit("\n", output) }
@@ -2301,47 +2082,6 @@ end
 -----------------
 -- Addon Setup --
 -----------------
-
-local configDefaults = {
-	scale = 1,
-	hideoncombat = false,
-	fontName = "Friz Quadrata TT",
-	fontHeight = 12,
-	fontFlags = "",
-	highlight = "",
-	highlightColor = "ffd200",
-	color = "ffffff",
-	allowall = false,
-	lineSpacing = 0,
-	allowplayers = "",
-	backdropShow = false,
-	backdropColor = "00000080",
-	glowColor = "FF0000",
-	editBoxFont = false,
-}
-
-function AngrySparks:GetConfig(key)
-	if AngrySparks_Config[key] == nil then
-		return configDefaults[key]
-	else
-		return AngrySparks_Config[key]
-	end
-end
-
-function AngrySparks:SetConfig(key, value)
-	if configDefaults[key] == value then
-		AngrySparks_Config[key] = nil
-	else
-		AngrySparks_Config[key] = value
-	end
-end
-
-function AngrySparks:RestoreDefaults()
-	AngrySparks_Config = {}
-	self:UpdateMedia()
-	self:UpdateDisplayed()
-	LibStub("AceConfigRegistry-3.0"):NotifyChange("AngrySparks")
-end
 
 local blizOptionsPanel
 function AngrySparks:OnInitialize()
@@ -2416,7 +2156,7 @@ function AngrySparks:OnInitialize()
 					AngrySparks_Categories = {}
 					self:UpdateTree()
 					self:UpdateSelected()
-					self:UpdateDisplayed()
+					coreModule:UpdateDisplayed()
 					if self.window then self.window.tree:SetSelected(nil) end
 					self:Print("All pages have been deleted.")
 				end
@@ -2530,10 +2270,10 @@ function AngrySparks:OnInitialize()
 						name = "Highlight",
 						desc =
 						"A list of words to highlight on displayed pages (separated by spaces or punctuation)\n\nUse 'Group' to highlight the current group you are in, ex. G2",
-						get = function(info) return self:GetConfig('highlight') end,
+						get = function(info) return configModule:GetConfig('highlight') end,
 						set = function(info, val)
-							self:SetConfig('highlight', val)
-							self:UpdateDisplayed()
+							configModule:SetConfig('highlight', val)
+							coreModule:UpdateDisplayed()
 						end
 					},
 					hideoncombat = {
@@ -2541,9 +2281,9 @@ function AngrySparks:OnInitialize()
 						order = 3,
 						name = "Hide on Combat",
 						desc = "Enable to hide display frame upon entering combat",
-						get = function(info) return self:GetConfig('hideoncombat') end,
+						get = function(info) return configModule:GetConfig('hideoncombat') end,
 						set = function(info, val)
-							self:SetConfig('hideoncombat', val)
+							configModule:SetConfig('hideoncombat', val)
 						end
 					},
 					scale = {
@@ -2553,9 +2293,9 @@ function AngrySparks:OnInitialize()
 						desc = "Sets the scale of the edit window",
 						min = 0.3,
 						max = 3,
-						get = function(info) return self:GetConfig('scale') end,
+						get = function(info) return configModule:GetConfig('scale') end,
 						set = function(info, val)
-							self:SetConfig('scale', val)
+							configModule:SetConfig('scale', val)
 							if AngrySparks.window then AngrySparks.window.frame:SetScale(val) end
 						end
 					},
@@ -2564,9 +2304,9 @@ function AngrySparks:OnInitialize()
 						order = 5,
 						name = "Display Backdrop",
 						desc = "Enable to display a backdrop behind the assignment display",
-						get = function(info) return self:GetConfig('backdropShow') end,
+						get = function(info) return configModule:GetConfig('backdropShow') end,
 						set = function(info, val)
-							self:SetConfig('backdropShow', val)
+							configModule:SetConfig('backdropShow', val)
 							self:SyncTextSizeFrames()
 						end
 					},
@@ -2577,13 +2317,13 @@ function AngrySparks:OnInitialize()
 						desc = "The color used by the backdrop",
 						hasAlpha = true,
 						get = function(info)
-							local hex = self:GetConfig('backdropColor')
-							return HexToRGB(hex)
+							local hex = configModule:GetConfig('backdropColor')
+							return utilsModule:HexToRGB(hex)
 						end,
 						set = function(info, r, g, b, a)
-							self:SetConfig('backdropColor', RGBToHex(r, g, b, a))
-							self:UpdateMedia()
-							self:UpdateDisplayed()
+							configModule:SetConfig('backdropColor', utilsModule:RGBToHex(r, g, b, a))
+							coreModule:UpdateMedia()
+							coreModule:UpdateDisplayed()
 						end
 					},
 					updatecolor = {
@@ -2592,11 +2332,11 @@ function AngrySparks:OnInitialize()
 						name = "Update Notification Color",
 						desc = "The color used by the update notification glow",
 						get = function(info)
-							local hex = self:GetConfig('glowColor')
-							return HexToRGB(hex)
+							local hex = configModule:GetConfig('glowColor')
+							return utilsModule:HexToRGB(hex)
 						end,
 						set = function(info, r, g, b)
-							self:SetConfig('glowColor', RGBToHex(r, g, b))
+							configModule:SetConfig('glowColor', utilsModule:RGBToHex(r, g, b))
 							self.display_glow:SetVertexColor(r, g, b)
 							self.display_glow2:SetVertexColor(r, g, b)
 						end
@@ -2616,10 +2356,10 @@ function AngrySparks:OnInitialize()
 						name = 'Face',
 						desc = 'Sets the font face used to display a page',
 						values = LSM:HashTable("font"),
-						get = function(info) return self:GetConfig('fontName') end,
+						get = function(info) return configModule:GetConfig('fontName') end,
 						set = function(info, val)
-							self:SetConfig('fontName', val)
-							self:UpdateMedia()
+							configModule:SetConfig('fontName', val)
+							coreModule:UpdateMedia()
 						end
 					},
 					fontheight = {
@@ -2632,10 +2372,10 @@ function AngrySparks:OnInitialize()
 						min = 6,
 						max = 24,
 						step = 1,
-						get = function(info) return self:GetConfig('fontHeight') end,
+						get = function(info) return configModule:GetConfig('fontHeight') end,
 						set = function(info, val)
-							self:SetConfig('fontHeight', val)
-							self:UpdateMedia()
+							configModule:SetConfig('fontHeight', val)
+							coreModule:UpdateMedia()
 						end
 					},
 					fontflags = {
@@ -2644,10 +2384,10 @@ function AngrySparks:OnInitialize()
 						name = "Outline",
 						desc = "Sets the font outline used to display a page",
 						values = { ["NONE"] = "None", ["OUTLINE"] = "Outline", ["THICKOUTLINE"] = "Thick Outline", ["MONOCHROMEOUTLINE"] = "Monochrome" },
-						get = function(info) return self:GetConfig('fontFlags') end,
+						get = function(info) return configModule:GetConfig('fontFlags') end,
 						set = function(info, val)
-							self:SetConfig('fontFlags', val)
-							self:UpdateMedia()
+							configModule:SetConfig('fontFlags', val)
+							coreModule:UpdateMedia()
 						end
 					},
 					color = {
@@ -2656,13 +2396,13 @@ function AngrySparks:OnInitialize()
 						name = "Normal Color",
 						desc = "The normal color used to display assignments",
 						get = function(info)
-							local hex = self:GetConfig('color')
-							return HexToRGB(hex)
+							local hex = configModule:GetConfig('color')
+							return utilsModule:HexToRGB(hex)
 						end,
 						set = function(info, r, g, b)
-							self:SetConfig('color', RGBToHex(r, g, b))
-							self:UpdateMedia()
-							self:UpdateDisplayed()
+							configModule:SetConfig('color', utilsModule:RGBToHex(r, g, b))
+							coreModule:UpdateMedia()
+							coreModule:UpdateDisplayed()
 						end
 					},
 					highlightcolor = {
@@ -2671,12 +2411,12 @@ function AngrySparks:OnInitialize()
 						name = "Highlight Color",
 						desc = "The color used to emphasize highlighted words",
 						get = function(info)
-							local hex = self:GetConfig('highlightColor')
-							return HexToRGB(hex)
+							local hex = configModule:GetConfig('highlightColor')
+							return utilsModule:HexToRGB(hex)
 						end,
 						set = function(info, r, g, b)
-							self:SetConfig('highlightColor', RGBToHex(r, g, b))
-							self:UpdateDisplayed()
+							configModule:SetConfig('highlightColor', utilsModule:RGBToHex(r, g, b))
+							coreModule:UpdateDisplayed()
 						end
 					},
 					linespacing = {
@@ -2689,11 +2429,11 @@ function AngrySparks:OnInitialize()
 						min = 0,
 						max = 10,
 						step = 1,
-						get = function(info) return self:GetConfig('lineSpacing') end,
+						get = function(info) return configModule:GetConfig('lineSpacing') end,
 						set = function(info, val)
-							self:SetConfig('lineSpacing', val)
-							self:UpdateMedia()
-							self:UpdateDisplayed()
+							configModule:SetConfig('lineSpacing', val)
+							coreModule:UpdateMedia()
+							coreModule:UpdateDisplayed()
 						end
 					},
 					editBoxFont = {
@@ -2701,10 +2441,10 @@ function AngrySparks:OnInitialize()
 						order = 7,
 						name = "Change Edit Box Font",
 						desc = "Enable to set edit box font to display font",
-						get = function(info) return self:GetConfig('editBoxFont') end,
+						get = function(info) return configModule:GetConfig('editBoxFont') end,
 						set = function(info, val)
-							self:SetConfig('editBoxFont', val)
-							self:UpdateMedia()
+							configModule:SetConfig('editBoxFont', val)
+							coreModule:UpdateMedia()
 						end
 					},
 				}
@@ -2720,9 +2460,9 @@ function AngrySparks:OnInitialize()
 						order = 1,
 						name = "Allow All",
 						desc = "Enable to allow changes from any raid assistant, even if you aren't in a guild raid",
-						get = function(info) return self:GetConfig('allowall') end,
+						get = function(info) return configModule:GetConfig('allowall') end,
 						set = function(info, val)
-							self:SetConfig('allowall', val)
+							configModule:SetConfig('allowall', val)
 							self:PermissionsUpdated()
 						end
 					},
@@ -2732,9 +2472,9 @@ function AngrySparks:OnInitialize()
 						name = "Allow Players",
 						desc =
 						"A list of players that when they are the raid leader to allow changes from all raid assistants",
-						get = function(info) return self:GetConfig('allowplayers') end,
+						get = function(info) return configModule:GetConfig('allowplayers') end,
 						set = function(info, val)
-							self:SetConfig('allowplayers', val)
+							configModule:SetConfig('allowplayers', val)
 							self:PermissionsUpdated()
 						end
 					},
@@ -2747,7 +2487,7 @@ function AngrySparks:OnInitialize()
 	LibStub("AceConfig-3.0"):RegisterOptionsTable("AngrySparks", options)
 
 	blizOptionsPanel = LibStub("AceConfigDialog-3.0"):AddToBlizOptions("AngrySparks", "Angry Sparks")
-	blizOptionsPanel.default = function() self:RestoreDefaults() end
+	blizOptionsPanel.default = function() configModule:RestoreDefaults() end
 end
 
 function AngrySparks:ChatCommand(input)
@@ -2760,7 +2500,7 @@ function AngrySparks:ChatCommand(input)
 end
 
 function AngrySparks:OnEnable()
-	self:CreateDisplay()
+	uiDisplayModule:CreateDisplay()
 
 	self:ScheduleTimer("AfterEnable", 4)
 
@@ -2768,7 +2508,7 @@ function AngrySparks:OnEnable()
 	self:RegisterEvent("PLAYER_GUILD_UPDATE")
 	self:RegisterEvent("GUILD_ROSTER_UPDATE")
 
-	GuildRoster()
+	C_GuildInfo.GuildRoster()
 
 	LSM.RegisterCallback(self, "LibSharedMedia_Registered", "UpdateMedia")
 	LSM.RegisterCallback(self, "LibSharedMedia_SetGlobal", "UpdateMedia")
@@ -2788,7 +2528,7 @@ function AngrySparks:GROUP_JOINED()
 end
 
 function AngrySparks:PLAYER_REGEN_DISABLED()
-	if AngrySparks:GetConfig('hideoncombat') then
+	if configModule:GetConfig('hideoncombat') then
 		self:HideDisplay()
 	end
 end
@@ -2813,7 +2553,7 @@ end
 function AngrySparks:GUILD_ROSTER_UPDATE(...)
 	local canRequestRosterUpdate = ...
 	if canRequestRosterUpdate then
-		GuildRoster()
+		C_GuildInfo.GuildRoster()
 	end
 end
 
