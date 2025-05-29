@@ -44,9 +44,11 @@
         "ToggleDropDownMenu",
         "UIDropDownMenu_AddButton",
         "StaticPopupDialogs",
-        "RED_FONT_COLOR_CODE"
+        "RED_FONT_COLOR_CODE",
+        "COMMAND"
     ],
     "Lua.diagnostics.disable": [
         "assign-type-mismatch"
-    ]
+    ],
+    "Lua.type.weakUnionCheck": true
 }

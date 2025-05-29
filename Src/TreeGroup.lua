@@ -2,6 +2,13 @@
 TreeGroup Container
 Container that uses a tree control to switch between groups.
 -------------------------------------------------------------------------------]]
+
+---@class AngrySparksTreeGroup: AceGUIWidget, AceGUIContainer
+---@field SetTree function
+---@field SelectByValue function
+---@field SetStatusTable function
+
+
 local Type, Version = "AngryTreeGroup", 2
 local AceGUI = LibStub and LibStub("AceGUI-3.0", true)
 if not AceGUI or (AceGUI:GetWidgetVersion(Type) or 0) >= Version then return end

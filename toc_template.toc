@@ -12,13 +12,16 @@
 
 embeds.xml
 
+# Always first
 Src/Stubs.lua
+
 Src/Core.lua
 Src/TreeGroup.lua
 Src/EasyMenu.lua
 Src/UiDisplay.lua
 Src/Utils.lua
 Src/Config.lua
+Src/Comm.lua
 
 #
 # Do not edit - this file is generated from TOC_TEMPLATE.TOC

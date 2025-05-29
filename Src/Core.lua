@@ -1,3 +1,24 @@
+---@class AngrySparksButton: AceGUIWidget, Button
+---@field SetDisabled function
+
+---@class ContainerWindow: AceGUIWidget, Frame, AceGUIContainer
+
+---@class AngrySparksWindow: ContainerWindow
+---@field frame Frame
+---@field display_text FontString
+---@field button_revert AngrySparksButton
+---@field button_restore AngrySparksButton
+---@field button_display AngrySparksButton
+---@field button_output AngrySparksButton
+---@field button_add AngrySparksButton
+---@field button_rename AngrySparksButton
+---@field button_delete AngrySparksButton
+---@field button_add_cat AngrySparksButton
+---@field button_variables AngrySparksButton
+---@field button_clear AngrySparksButton
+---@field text FontString
+---@field tree AngrySparksTreeGroup
+
 ---@class AngrySparksAddon: AceAddon, AceComm-3.0, AceEvent-3.0, AceTimer-3.0, AceConsole-3.0
 ---@field display_text FontString
 ---@field backdrop Texture
@@ -8,7 +29,8 @@
 ---@field direction_button Button
 ---@field display_glow Texture
 ---@field display_glow2 Texture
----@field window AceGUIWidget
+---@field window AngrySparksWindow
+---@field variablesWindow AngrySparksWindow
 local AngrySparks = LibStub("AceAddon-3.0"):NewAddon(
 	"AngrySparks",
 	"AceConsole-3.0", "AceEvent-3.0", "AceComm-3.0", "AceTimer-3.0"
@@ -22,14 +44,14 @@ coreModule.addon = AngrySparks
 local uiDisplayModule = LibStub("AngrySparks-Ui-Display") --[[@as UiDisplayModule]]
 local utilsModule = LibStub("AngrySparks-Utils") --[[@as UtilsModule]]
 local configModule = LibStub("AngrySparks-Config") --[[@as ConfigModule]]
+local commModule = LibStub("AngrySparks-Comm") --[[@as CommModule]]
 
 local AceGUI = LibStub("AceGUI-3.0")
 local lwin = LibStub("LibWindow-1.1")
 local LSM = LibStub("LibSharedMedia-3.0")
 local libC = LibStub("LibCompress")
-local LibSerialize = LibStub("LibSerialize")
-local LibDeflate = LibStub("LibDeflate")
 
+local slashCommand = "as"
 BINDING_HEADER_AngrySparks = "Angry Sparks"
 BINDING_NAME_AngrySparks_WINDOW = "Toggle Window"
 BINDING_NAME_AngrySparks_LOCK = "Toggle Lock"
@@ -38,31 +60,10 @@ BINDING_NAME_AngrySparks_SHOW_DISPLAY = "Show Display"
 BINDING_NAME_AngrySparks_HIDE_DISPLAY = "Hide Display"
 BINDING_NAME_AngrySparks_OUTPUT = "Output Assignment to Chat"
 
-local CURSEFORGE_URL = "https://legacy.curseforge.com/wow/addons/angry-sparks"
-
-local AngrySparks_Version = '@project-version@'
-local AngrySparks_Timestamp = '@project-date-integer@'
-
 local isClassic = (WOW_PROJECT_ID == WOW_PROJECT_BURNING_CRUSADE_CLASSIC)
 
-local protocolVersion = 100
-local comPrefix = "[Sparks" .. protocolVersion .. "]"
-local updateThrottle = 4
-local pageLastUpdate = {}
-local pageTimerId = {}
-local displayLastUpdate = nil
-local displayTimerId = nil
-local versionLastUpdate = nil
-local versionTimerId = nil
-
--- Used for version tracking
-local warnedOOD = false
-local versionList = {}
-
 local comStarted = false
-
 local warnedPermission = false
-
 local currentGroup = nil
 
 -- Pages Saved Variable Format
@@ -96,217 +97,13 @@ local currentGroup = nil
 -- { "VER_QUERY" }
 -- { "VERSION", [Version], [Project Timestamp], [Valid Raid] }
 
--- Constants for dealing with our addon communication
-local COMMAND = 1
-
-local PAGE_Id = 2
-local PAGE_Updated = 3
-local PAGE_Name = 4
-local PAGE_Contents = 5
-local PAGE_UpdateId = 6
-local PAGE_Variables = 7
-
-local REQUEST_PAGE_Id = 2
-
-local DISPLAY_Id = 2
-local DISPLAY_Updated = 3
-local DISPLAY_UpdateId = 4
-
-local VERSION_Version = 2
-local VERSION_Timestamp = 3
-local VERSION_ValidRaid = 4
-
------------------------
--- Debug Functions --
------------------------
--- --@debug@
--- function DBG_dump(o)
--- 	if type(o) == 'table' then
--- 		local s = '{ '
--- 		for k, v in pairs(o) do
--- 			if type(k) ~= 'number' then k = '"' .. k .. '"' end
--- 			s = s .. '[' .. k .. '] = ' .. DBG_dump(v) .. ','
--- 		end
--- 		return s .. '} '
--- 	else
--- 		return tostring(o)
--- 	end
--- end
-
--- --@end-debug@
-
--- --@alpha@
--- local dbgMessageShown = false
--- local function dbg(msg, data)
--- 	if ViragDevTool_AddData then
--- 		ViragDevTool_AddData(data, msg)
--- 	else
--- 		if not dbgMessageShown then
--- 			print(
--- 				"Please install ViragDevTool from http://mods.curse.com/addons/wow/varrendevtool to view debug info for Angry Sparks.")
--- 			dbgMessageShown = true
--- 		end
--- 	end
--- end
--- --@end-alpha@
-
 -------------------------
 -- Addon Communication --
 -------------------------
 
+---Proxy to commModule
 function AngrySparks:ReceiveMessage(prefix, data, channel, sender)
-	if prefix ~= comPrefix then return end
-
-	local decoded = LibDeflate:DecodeForWoWAddonChannel(data)
-	if not decoded then return end
-	local decompressed = LibDeflate:DecompressDeflate(decoded)
-	if not decompressed then return end
-	local success, final = LibSerialize:Deserialize(decompressed)
-	if not success then return end
-
-	self:ProcessMessage(sender, final)
-end
-
-function AngrySparks:SendOutMessage(data, channel, target)
-	local serialized = LibSerialize:Serialize(data)
-	local compressed = LibDeflate:CompressDeflate(serialized)
-	local encoded = LibDeflate:EncodeForWoWAddonChannel(compressed)
-
-	if not channel then
-		if IsInGroup(LE_PARTY_CATEGORY_INSTANCE) or IsInRaid(LE_PARTY_CATEGORY_INSTANCE) then
-			channel = "INSTANCE_CHAT"
-		elseif IsInRaid(LE_PARTY_CATEGORY_HOME) then
-			channel = "RAID"
-		elseif IsInGroup(LE_PARTY_CATEGORY_HOME) then
-			channel = "PARTY"
-		end
-	end
-
-	if not channel then return end
-
-	--@alpha@
-	-- dbg("AG Send Message " .. data[COMMAND], { target, channel, data, string.len(encoded) })
-	--@end-alpha@
-	self:SendCommMessage(comPrefix, encoded, channel, target, "BULK")
-	return true
-end
-
-function AngrySparks:ProcessMessage(sender, data)
-	local cmd = data[COMMAND]
-	sender = utilsModule:EnsureUnitFullName(sender)
-
-	--@alpha@
-	-- dbg("AG Process " .. cmd, { sender, data })
-	--@end-alpha@
-
-	if cmd == "PAGE" then
-		if sender == utilsModule:PlayerFullName() then return end
-		if not self:PermissionCheck(sender) then
-			self:PermissionCheckFailError(sender)
-			return
-		end
-
-		local contents_updated = true
-		local id = data[PAGE_Id]
-		local page = AngrySparks_Pages[id]
-		if page then
-			if data[PAGE_UpdateId] and page.UpdateId == data[PAGE_UpdateId] then return end -- The version received is same as the one we already have
-
-			contents_updated = page.Contents ~= data[PAGE_Contents]
-
-			AngrySparks_Variables = data[PAGE_Variables]
-
-			page.Name = data[PAGE_Name]
-			page.Contents = data[PAGE_Contents]
-			page.Updated = data[PAGE_Updated]
-			page.UpdateId = data[PAGE_UpdateId] or self:Hash(page.Name, page.Contents, AngrySparks:VariablesToString())
-
-			if self:SelectedId() == id then
-				self:SelectedUpdated(sender)
-				self:UpdateSelected()
-			end
-		else
-			AngrySparks_Pages[id] = {
-				Id = id,
-				Updated = data[PAGE_Updated],
-				UpdateId = data[PAGE_UpdateId],
-				Name = data
-					[PAGE_Name],
-				Contents = data[PAGE_Contents]
-			}
-			AngrySparks_Variables = data[PAGE_Variables]
-		end
-
-		if AngrySparks_State.displayed == id then
-			coreModule:UpdateDisplayed()
-			self:ShowDisplay()
-			if contents_updated then self:DisplayUpdateNotification() end
-		end
-
-		self:UpdateTree()
-	elseif cmd == "DISPLAY" then
-		if sender == utilsModule:PlayerFullName() then return end
-		if not self:PermissionCheck(sender) then
-			if data[DISPLAY_Id] then self:PermissionCheckFailError(sender) end
-			return
-		end
-
-		local id = data[DISPLAY_Id]
-		local updated = data[DISPLAY_Updated]
-		local updateId = data[DISPLAY_UpdateId]
-		local page = AngrySparks_Pages[id]
-		local sameVersion = (updateId and page and updateId == page.UpdateId) or
-			(not updateId and page and updated == page.Updated)
-		if id and not sameVersion then
-			self:SendRequestPage(id, sender)
-		end
-
-		if AngrySparks_State.displayed ~= id then
-			AngrySparks_State.displayed = id
-			self:UpdateTree()
-			coreModule:UpdateDisplayed()
-			self:ShowDisplay()
-			if id then self:DisplayUpdateNotification() end
-		end
-	elseif cmd == "REQUEST_DISPLAY" then
-		if sender == utilsModule:PlayerFullName() then return end
-		if not self:IsPlayerRaidLeader() then return end
-
-		self:SendDisplay(AngrySparks_State.displayed)
-	elseif cmd == "REQUEST_PAGE" then
-		if sender == utilsModule:PlayerFullName() then return end
-
-		self:SendPage(data[REQUEST_PAGE_Id])
-	elseif cmd == "VER_QUERY" then
-		self:SendVersion(false)
-	elseif cmd == "VERSION" then
-		local localTimestamp, ver, timestamp
-
-		if AngrySparks_Timestamp:sub(1, 1) == "@" then
-			localTimestamp = "dev"
-		else
-			localTimestamp = tonumber(
-				AngrySparks_Timestamp)
-		end
-		ver = data[VERSION_Version]
-		timestamp = data[VERSION_Timestamp]
-
-		local localStr = tostring(localTimestamp)
-		local remoteStr = tostring(timestamp)
-
-		if (localStr ~= "dev" and localStr:len() ~= 14) or (remoteStr ~= "dev" and remoteStr:len() ~= 14) then
-			if localStr ~= "dev" then localTimestamp = tonumber(localStr:sub(1, 8)) end
-			if remoteStr ~= "dev" then timestamp = tonumber(remoteStr:sub(1, 8)) end
-		end
-
-		if localTimestamp ~= "dev" and timestamp ~= "dev" and timestamp > localTimestamp and not warnedOOD then
-			self:Print(
-				"Your version of Angry Sparks is out of date! Download the latest version from " .. CURSEFORGE_URL)
-			warnedOOD = true
-		end
-
-		versionList[sender] = { valid = data[VERSION_ValidRaid], version = ver }
-	end
+	commModule:ReceiveMessage(prefix, data, channel, sender)
 end
 
 function AngrySparks:PermissionCheckFailError(sender)
@@ -319,155 +116,7 @@ function AngrySparks:PermissionCheckFailError(sender)
 	end
 end
 
-function AngrySparks:SendPage(id, force)
-	local lastUpdate = pageLastUpdate[id]
-	local timerId = pageTimerId[id]
-	local curTime = time()
-
-	if lastUpdate and (curTime - lastUpdate <= updateThrottle) then
-		if not timerId then
-			if force then
-				self:SendPageMessage(id)
-			else
-				pageTimerId[id] = self:ScheduleTimer("SendPageMessage", updateThrottle - (curTime - lastUpdate), id)
-			end
-		elseif force then
-			self:CancelTimer(timerId)
-			self:SendPageMessage(id)
-		end
-	else
-		self:SendPageMessage(id)
-	end
-end
-
-function AngrySparks:SendPageMessage(id)
-	pageLastUpdate[id] = time()
-	pageTimerId[id] = nil
-
-	local page = AngrySparks_Pages[id]
-	if not page then
-		error("Can't send page, does not exist"); return
-	end
-
-	if not page.UpdateId then
-		page.UpdateId = self:Hash(page.Name, page.Contents, AngrySparks:VariablesToString())
-	end
-
-	self:SendOutMessage({
-		"PAGE",
-		[PAGE_Id] = page.Id,
-		[PAGE_Updated] = page.Updated,
-		[PAGE_Name] = page.Name,
-		[PAGE_Contents] = page.Contents,
-		[PAGE_UpdateId] = page.UpdateId,
-		[PAGE_Variables] = AngrySparks_Variables
-	})
-end
-
-function AngrySparks:SendDisplay(id, force)
-	local curTime = time()
-
-	if displayLastUpdate and (curTime - displayLastUpdate <= updateThrottle) then
-		if not displayTimerId then
-			if force then
-				self:SendDisplayMessage(id)
-			else
-				displayTimerId = self:ScheduleTimer("SendDisplayMessage", updateThrottle - (curTime - displayLastUpdate),
-					id)
-			end
-		elseif force then
-			self:CancelTimer(displayTimerId)
-			self:SendDisplayMessage(id)
-		end
-	else
-		self:SendDisplayMessage(id)
-	end
-end
-
-function AngrySparks:SendDisplayMessage(id)
-	displayLastUpdate = time()
-	displayTimerId = nil
-
-	local page = AngrySparks_Pages[id]
-	if not page then
-		self:SendOutMessage({ "DISPLAY", [DISPLAY_Id] = nil, [DISPLAY_Updated] = nil, [DISPLAY_UpdateId] = nil })
-	else
-		if not page.UpdateId then
-			self:RehashPage(id)
-		end
-		self:SendOutMessage({
-			"DISPLAY",
-			[DISPLAY_Id] = page.Id,
-			[DISPLAY_Updated] = page.Updated,
-			[DISPLAY_UpdateId] =
-				page.UpdateId
-		})
-	end
-end
-
-function AngrySparks:SendRequestDisplay()
-	if (IsInRaid() or IsInGroup()) then
-		local to = self:GetRaidLeader(true)
-		if to then self:SendOutMessage({ "REQUEST_DISPLAY" }, "WHISPER", to) end
-	end
-end
-
----@param force boolean
-function AngrySparks:SendVersion(force)
-	local curTime = time()
-
-	if versionLastUpdate and (curTime - versionLastUpdate <= updateThrottle) then
-		if not versionTimerId then
-			if force then
-				self:SendVersionMessage(id)
-			else
-				versionTimerId = self:ScheduleTimer(
-					"SendVersionMessage",
-					updateThrottle - (curTime - versionLastUpdate), id
-				)
-			end
-		elseif force then
-			self:CancelTimer(versionTimerId)
-			self:SendVersionMessage()
-		end
-	else
-		self:SendVersionMessage()
-	end
-end
-
-function AngrySparks:SendVersionMessage()
-	versionLastUpdate = time()
-	versionTimerId = nil
-
-	local revToSend
-	local timestampToSend
-	local verToSend
-	if AngrySparks_Version:sub(1, 1) == "@" then verToSend = "dev" else verToSend = AngrySparks_Version end
-	if AngrySparks_Timestamp:sub(1, 1) == "@" then
-		timestampToSend = "dev"
-	else
-		timestampToSend = tonumber(
-			AngrySparks_Timestamp)
-	end
-	self:SendOutMessage({
-		"VERSION",
-		[VERSION_Version] = verToSend,
-		[VERSION_Timestamp] = timestampToSend,
-		[VERSION_ValidRaid] = self:IsValidRaid()
-	})
-end
-
-function AngrySparks:SendVerQuery()
-	self:SendOutMessage({ "VER_QUERY" })
-end
-
-function AngrySparks:SendRequestPage(id, to)
-	if (IsInRaid() or IsInGroup()) or to then
-		if not to then to = self:GetRaidLeader(true) end
-		if to then self:SendOutMessage({ "REQUEST_PAGE", [REQUEST_PAGE_Id] = id }, "WHISPER", to) end
-	end
-end
-
+---TODO: Cache for 10+ seconds if this is really expensive?
 function AngrySparks:GetRaidLeader(online_only)
 	if (IsInRaid() or IsInGroup()) then
 		for i = 1, GetNumGroupMembers() do
@@ -495,51 +144,6 @@ function AngrySparks:GetCurrentGroup()
 		end
 	end
 	return nil
-end
-
-function AngrySparks:VersionCheckOutput()
-	local missing_addon = {}
-	local invalid_raid = {}
-	local different_version = {}
-	local up_to_date = {}
-
-	local ver = AngrySparks_Version
-	if ver:sub(1, 1) == "@" then ver = "dev" end
-
-	if (IsInRaid() or IsInGroup()) then
-		for i = 1, GetNumGroupMembers() do
-			local name, _, _, _, _, _, _, online = GetRaidRosterInfo(i)
-			local fullname = utilsModule:EnsureUnitFullName(name)
-			if online then
-				if not versionList[fullname] then
-					tinsert(missing_addon, name)
-				elseif versionList[fullname].valid == false or versionList[fullname].valid == nil then
-					tinsert(invalid_raid, name)
-				elseif ver ~= versionList[fullname].version then
-					tinsert(different_version, string.format("%s - %s", name, versionList[fullname].version))
-				else
-					tinsert(up_to_date, name)
-				end
-			end
-		end
-	end
-
-	self:Print("Version check results:")
-	if #up_to_date > 0 then
-		print(LIGHTYELLOW_FONT_COLOR_CODE .. "Same version:|r " .. table.concat(up_to_date, ", "))
-	end
-
-	if #different_version > 0 then
-		print(LIGHTYELLOW_FONT_COLOR_CODE .. "Different version:|r " .. table.concat(different_version, ", "))
-	end
-
-	if #invalid_raid > 0 then
-		print(LIGHTYELLOW_FONT_COLOR_CODE .. "Not allowing changes:|r " .. table.concat(invalid_raid, ", "))
-	end
-
-	if #missing_addon > 0 then
-		print(LIGHTYELLOW_FONT_COLOR_CODE .. "Missing addon:|r " .. table.concat(missing_addon, ", "))
-	end
 end
 
 --------------------------
@@ -745,8 +349,8 @@ function AngrySparks:DisplayPage(id)
 	if not self:PermissionCheck() then return end
 
 	self:TouchPage(id)
-	self:SendPage(id, true)
-	self:SendDisplay(id, true)
+	commModule:SendPage(id, true)
+	commModule:SendDisplay(id, true)
 
 	if AngrySparks_State.displayed ~= id then
 		AngrySparks_State.displayed = id
@@ -769,7 +373,7 @@ local function AngrySparks_ClearPage(widget, event, value)
 	if not AngrySparks:PermissionCheck() then return end
 
 	AngrySparks:ClearDisplayed()
-	AngrySparks:SendDisplay(nil, true)
+	commModule:SendDisplay(nil, true)
 end
 
 local function AngrySparks_TextChanged(widget, event, value)
@@ -838,8 +442,8 @@ function AngrySparks_PageMenu(pageId)
 	if not PagesDropDownList then
 		PagesDropDownList = {
 			{ notCheckable = true, isTitle = true },
-			{ text = "Rename",     notCheckable = true, func = function(frame, pageId) AngrySparks_RenamePage(pageId) end },
-			{ text = "Delete",     notCheckable = true, func = function(frame, pageId) AngrySparks_DeletePage(pageId) end },
+			{ text = "Rename",     notCheckable = true, func = function(frame, pageId1) AngrySparks_RenamePage(pageId) end },
+			{ text = "Delete",     notCheckable = true, func = function(frame, pageId2) AngrySparks_DeletePage(pageId) end },
 			{ text = "Category",   notCheckable = true, hasArrow = true },
 		}
 	end
@@ -923,7 +527,7 @@ local function AngrySparks_TreeClick(widget, event, value, selected, button)
 end
 
 function AngrySparks:CreateWindow()
-	local window = AceGUI:Create("Frame")
+	local window = AceGUI:Create("Frame") ---@type AngrySparksWindow
 	window:SetTitle("Angry Sparks")
 	window:SetStatusText("")
 	window:SetLayout("Flow")
@@ -943,7 +547,7 @@ function AngrySparks:CreateWindow()
 	window.frame:SetClampedToScreen(true)
 	tinsert(UISpecialFrames, "AngrySparks_Window")
 
-	local tree = AceGUI:Create("AngryTreeGroup")
+	local tree = AceGUI:Create("AngryTreeGroup") ---@type AngrySparksTreeGroup
 	tree:SetTree(self:GetTree())
 	tree:SelectByValue(1)
 	tree:SetStatusTable(AngrySparks_State.tree)
@@ -1087,7 +691,7 @@ function AngrySparks:CreateWindow()
 end
 
 function AngrySparks:CreateVariablesWindow()
-	local window = AceGUI:Create("Frame")
+	local window = AceGUI:Create("Frame") ---@type AngrySparksWindow
 	window:Hide()
 
 	window:SetTitle("Variables")
@@ -1118,7 +722,7 @@ function AngrySparks:CreateVariablesWindow()
 	text:SetLabel(nil)
 	text:SetFullWidth(true)
 	text:SetFullHeight(true)
-	text:SetText(AngrySparks:VariablesToString())
+	text:SetText(AngrySparks:SerializeVariables())
 
 	text:SetCallback("OnEnterPressed", function()
 		AngrySparks:SaveVariables(text:GetText())
@@ -1134,7 +738,7 @@ function AngrySparks:CreateVariablesWindow()
 
 	window:AddChild(text)
 
-	window:SetCallback("OnShow", function() text:SetText(AngrySparks:VariablesToString()) end)
+	window:SetCallback("OnShow", function() text:SetText(AngrySparks:SerializeVariables()) end)
 end
 
 function AngrySparks:ToggleVariablesDisplay()
@@ -1145,6 +749,8 @@ function AngrySparks:ToggleVariablesDisplay()
 	end
 end
 
+---Parses variables from text into pairs of key/value and stores them as dictionary in `AngrySparks_Variables`
+---@param text string
 function AngrySparks:SaveVariables(text)
 	local tmp = {}
 
@@ -1160,7 +766,7 @@ function AngrySparks:SaveVariables(text)
 	AngrySparks_Variables = tmp
 end
 
-function AngrySparks:VariablesToString()
+function AngrySparks:SerializeVariables()
 	local s = ""
 	for _, v in ipairs(AngrySparks_Variables) do
 		if v[1] and v[2] then
@@ -1353,13 +959,12 @@ function AngrySparks:CreatePage(name)
 	AngrySparks_Pages[id] = {
 		Id = id,
 		Updated = time(),
-		UpdateId = self:Hash(name, "", AngrySparks:VariablesToString()),
-		Name =
-			name,
+		UpdateId = self:Hash(name, "", AngrySparks:SerializeVariables()),
+		Name = name,
 		Contents = ""
 	}
 	self:UpdateTree(id)
-	self:SendPage(id, true)
+	commModule:SendPage(id, true)
 end
 
 function AngrySparks:RenamePage(id, name)
@@ -1370,7 +975,7 @@ function AngrySparks:RenamePage(id, name)
 	page.Updated = time()
 	self:RehashPage(id)
 
-	self:SendPage(id, true)
+	commModule:SendPage(id, true)
 	self:UpdateTree()
 	if AngrySparks_State.displayed == id then
 		coreModule:UpdateDisplayed()
@@ -1401,7 +1006,7 @@ end
 function AngrySparks:RehashPage(id)
 	local page = self:Get(id)
 	if not page then return end
-	page.UpdateId = self:Hash(page.Name, page.Contents, AngrySparks:VariablesToString())
+	page.UpdateId = self:Hash(page.Name, page.Contents, AngrySparks:SerializeVariables())
 end
 
 function AngrySparks:CreateCategory(name)
@@ -1524,9 +1129,10 @@ function AngrySparks:IsGuildRaid()
 	if IsInRaid() then
 		local leader = self:GetRaidLeader()
 
-		local totalMembers, _, numOnlineAndMobileMembers = GetNumGuildMembers()
-		local scanTotal = GetGuildRosterShowOffline() and totalMembers or
-			numOnlineAndMobileMembers --Attempt CPU saving, if "show offline" is unchecked, we can reliably scan only online members instead of whole roster
+		-- local totalMembers, _, numOnlineAndMobileMembers = GetNumGuildMembers()
+		local totalMembers, numOnlineAndMobileMembers = GetNumGuildMembers()
+		-- Attempt CPU saving, if "show offline" is unchecked, we can reliably scan only online members instead of whole roster
+		local scanTotal = (GetGuildRosterShowOffline() and totalMembers or numOnlineAndMobileMembers)
 		for i = 1, scanTotal do
 			local name = GetGuildRosterInfo(i)
 			if not name then break end
@@ -1545,6 +1151,7 @@ function AngrySparks:IsValidRaid()
 		return true
 	end
 
+	local leader = self:GetRaidLeader()
 	for token in string.gmatch(configModule:GetConfig('allowplayers'), "[^%s!#$%%&()*+,./:;<=>?@\\^_{|}~%[%]]+") do
 		if leader and utilsModule:EnsureUnitFullName(token):lower() == utilsModule:EnsureUnitFullName(leader):lower() then
 			return true
@@ -1576,7 +1183,7 @@ end
 function AngrySparks:PermissionsUpdated()
 	self:UpdateSelected()
 	if comStarted then
-		self:SendRequestDisplay()
+		commModule:SendRequestDisplay()
 	end
 	if (IsInRaid() or IsInGroup()) and not self:IsValidRaid() then
 		self:ClearDisplayed()
@@ -2118,7 +1725,7 @@ function AngrySparks:OnInitialize()
 		AngrySparks_Variables[2] = { "mage1", "Praxxis" }
 	end
 
-	local ver = AngrySparks_Version
+	local ver = commModule.AngrySparks_Version
 	if ver:sub(1, 1) == "@" then ver = "dev" end
 
 	local options = {
@@ -2139,7 +1746,7 @@ function AngrySparks:OnInitialize()
 				name = "Help",
 				hidden = true,
 				func = function()
-					LibStub("AceConfigCmd-3.0").HandleCommand(self, "aa", "AngrySparks", "")
+					LibStub("AceConfigCmd-3.0").HandleCommand(self, slashCommand, "AngrySparks", "")
 				end
 			},
 			toggle = {
@@ -2177,7 +1784,7 @@ function AngrySparks:OnInitialize()
 				cmdHidden = false,
 				confirm = true,
 				func = function()
-					self:RestoreDefaults()
+					configModule:RestoreDefaults()
 				end
 			},
 			output = {
@@ -2249,9 +1856,9 @@ function AngrySparks:OnInitialize()
 				desc = "Displays a list of all users (in the raid) running the addon and the version they're running",
 				func = function()
 					if (IsInRaid() or IsInGroup()) then
-						versionList = {} -- start with a fresh version list, when displaying it
-						self:SendOutMessage({ "VER_QUERY" })
-						self:ScheduleTimer("VersionCheckOutput", updateThrottle)
+						commModule.versionList = {} -- start with a fresh version list, when displaying it
+						commModule:SendOutMessage({ "VER_QUERY" })
+						self:ScheduleTimer("VersionCheckOutput", commModule.updateThrottle)
 						self:Print("Version check running...")
 					else
 						self:Print("You must be in a raid group to run the version check.")
@@ -2490,7 +2097,7 @@ function AngrySparks:OnInitialize()
 		}
 	}
 
-	self:RegisterChatCommand("aa", "ChatCommand")
+	self:RegisterChatCommand(slashCommand, "ChatCommand")
 	LibStub("AceConfig-3.0"):RegisterOptionsTable("AngrySparks", options)
 
 	blizOptionsPanel = LibStub("AceConfigDialog-3.0"):AddToBlizOptions("AngrySparks", "Angry Sparks")
@@ -2502,7 +2109,7 @@ function AngrySparks:ChatCommand(input)
 		Settings.OpenToCategory(blizOptionsPanel)
 		-- Settings.OpenToCategory(blizOptionsPanel)
 	else
-		LibStub("AceConfigCmd-3.0").HandleCommand(self, "aa", "AngrySparks", input)
+		LibStub("AceConfigCmd-3.0").HandleCommand(self, slashCommand, "AngrySparks", input)
 	end
 end
 
@@ -2529,7 +2136,7 @@ function AngrySparks:PARTY_LEADER_CHANGED()
 end
 
 function AngrySparks:GROUP_JOINED()
-	self:SendVerQuery()
+	commModule:SendVerQuery()
 	self:UpdateDisplayedIfNewGroup()
 	self:ScheduleTimer("SendRequestDisplay", 0.5)
 end
@@ -2565,7 +2172,7 @@ function AngrySparks:GUILD_ROSTER_UPDATE(...)
 end
 
 function AngrySparks:AfterEnable()
-	self:RegisterComm(comPrefix, "ReceiveMessage")
+	self:RegisterComm(commModule.comPrefix, "ReceiveMessage")
 	comStarted = true
 
 	if not (IsInRaid() or IsInGroup()) then
@@ -2576,7 +2183,7 @@ function AngrySparks:AfterEnable()
 	self:RegisterEvent("GROUP_JOINED")
 	self:RegisterEvent("GROUP_ROSTER_UPDATE")
 
-	self:SendRequestDisplay()
+	commModule:SendRequestDisplay()
 	self:UpdateDisplayedIfNewGroup()
-	self:SendVerQuery()
+	commModule:SendVerQuery()
 end

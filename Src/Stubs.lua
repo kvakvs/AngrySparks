@@ -2,4 +2,4 @@ LibStub:NewLibrary("AngrySparks-Core", 1)
 LibStub:NewLibrary("AngrySparks-Config", 1)
 LibStub:NewLibrary("AngrySparks-Ui-Display", 1)
 LibStub:NewLibrary("AngrySparks-Utils", 1)
-
+LibStub:NewLibrary("AngrySparks-Comm", 1)
