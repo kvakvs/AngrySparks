@@ -2138,7 +2138,7 @@ end
 function AngrySparks:GROUP_JOINED()
 	commModule:SendVerQuery()
 	self:UpdateDisplayedIfNewGroup()
-	self:ScheduleTimer("SendRequestDisplay", 0.5)
+	self:ScheduleTimer(function() commModule:SendRequestDisplay() end, 0.5)
 end
 
 function AngrySparks:PLAYER_REGEN_DISABLED()

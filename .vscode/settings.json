@@ -45,7 +45,9 @@
         "UIDropDownMenu_AddButton",
         "StaticPopupDialogs",
         "RED_FONT_COLOR_CODE",
-        "COMMAND"
+        "COMMAND",
+        "WOW_PROJECT_ID",
+        "UIParent"
     ],
     "Lua.diagnostics.disable": [
         "assign-type-mismatch"
