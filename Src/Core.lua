@@ -38,20 +38,23 @@ local AngrySparks = LibStub("AceAddon-3.0"):NewAddon(
 
 ---@class CoreModule
 ---@field addon AngrySparksAddon
+---@field blizOptionsPanel AceConfigDialog-3.0
 local coreModule = LibStub("AngrySparks-Core") --[[@as CoreModule]]
 coreModule.addon = AngrySparks
+coreModule.blizOptionsPanel = nil
 
 local uiDisplayModule = LibStub("AngrySparks-Ui-Display") --[[@as UiDisplayModule]]
 local utilsModule = LibStub("AngrySparks-Utils") --[[@as UtilsModule]]
 local configModule = LibStub("AngrySparks-Config") --[[@as ConfigModule]]
 local commModule = LibStub("AngrySparks-Comm") --[[@as CommModule]]
+local eventsModule = LibStub("AngrySparks-Events") --[[@as EventsModule]]
+local slashModule = LibStub("AngrySparks-Slash") --[[@as SlashModule]]
 
 local AceGUI = LibStub("AceGUI-3.0")
 local lwin = LibStub("LibWindow-1.1")
 local LSM = LibStub("LibSharedMedia-3.0")
 local libC = LibStub("LibCompress")
 
-local slashCommand = "as"
 BINDING_HEADER_AngrySparks = "Angry Sparks"
 BINDING_NAME_AngrySparks_WINDOW = "Toggle Window"
 BINDING_NAME_AngrySparks_LOCK = "Toggle Lock"
@@ -63,8 +66,8 @@ BINDING_NAME_AngrySparks_OUTPUT = "Output Assignment to Chat"
 local isClassic = (WOW_PROJECT_ID == WOW_PROJECT_BURNING_CRUSADE_CLASSIC)
 
 local comStarted = false
-local warnedPermission = false
-local currentGroup = nil
+coreModule.warnedPermission = false
+coreModule.currentGroup = nil
 
 -- Pages Saved Variable Format
 -- 	AngrySparks_Pages = {
@@ -107,12 +110,12 @@ function AngrySparks:ReceiveMessage(prefix, data, channel, sender)
 end
 
 function AngrySparks:PermissionCheckFailError(sender)
-	if not warnedPermission then
+	if not coreModule.warnedPermission then
 		self:Print(RED_FONT_COLOR_CODE ..
 			"You have received a page update from " ..
 			Ambiguate(sender, "none") ..
 			" that was rejected due to insufficient permissions. If you wish to see this page, please adjust your permission settings.|r")
-		warnedPermission = true
+		coreModule.warnedPermission = true
 	end
 end
 
@@ -369,7 +372,7 @@ local function AngrySparks_DisplayPage(widget, event, value)
 	AngrySparks:DisplayPage(id)
 end
 
-local function AngrySparks_ClearPage(widget, event, value)
+function AngrySparks_ClearPage(widget, event, value)
 	if not AngrySparks:PermissionCheck() then return end
 
 	AngrySparks:ClearDisplayed()
@@ -1423,8 +1426,8 @@ end
 
 function AngrySparks:UpdateDisplayedIfNewGroup()
 	local newGroup = self:GetCurrentGroup()
-	if newGroup ~= currentGroup then
-		currentGroup = newGroup
+	if newGroup ~= coreModule.currentGroup then
+		coreModule.currentGroup = newGroup
 		coreModule:UpdateDisplayed()
 	end
 end
@@ -1446,7 +1449,7 @@ function coreModule:UpdateDisplayed()
 		for token in string.gmatch(configModule:GetConfig('highlight'), "[^%s%p]+") do
 			token = token:lower()
 			if token == 'group' then
-				tinsert(highlights, 'g' .. (currentGroup or 0))
+				tinsert(highlights, 'g' .. (coreModule.currentGroup or 0))
 			else
 				tinsert(highlights, token)
 			end
@@ -1697,7 +1700,6 @@ end
 -- Addon Setup --
 -----------------
 
-local blizOptionsPanel
 function AngrySparks:OnInitialize()
 	if AngrySparks_State == nil then
 		AngrySparks_State = { tree = {}, window = {}, display = {}, displayed = nil, locked = false, directionUp = false, currentPage = 1 }
@@ -1725,389 +1727,18 @@ function AngrySparks:OnInitialize()
 		AngrySparks_Variables[2] = { "mage1", "Praxxis" }
 	end
 
-	local ver = commModule.AngrySparks_Version
-	if ver:sub(1, 1) == "@" then ver = "dev" end
+	slashModule.Initialize()
 
-	local options = {
-		name = "Angry Sparks " .. ver,
-		handler = AngrySparks,
-		type = "group",
-		args = {
-			window = {
-				type = "execute",
-				order = 3,
-				name = "Toggle Window",
-				desc = "Shows/hides the edit window (also available in game keybindings)",
-				func = function() AngrySparks_ToggleWindow() end
-			},
-			help = {
-				type = "execute",
-				order = 99,
-				name = "Help",
-				hidden = true,
-				func = function()
-					LibStub("AceConfigCmd-3.0").HandleCommand(self, slashCommand, "AngrySparks", "")
-				end
-			},
-			toggle = {
-				type = "execute",
-				order = 1,
-				name = "Toggle Display",
-				desc = "Shows/hides the display frame (also available in game keybindings)",
-				func = function() AngrySparks_ToggleDisplay() end
-			},
-			deleteall = {
-				type = "execute",
-				name = "Delete All Pages",
-				desc = "Deletes all pages",
-				order = 4,
-				hidden = true,
-				cmdHidden = false,
-				confirm = true,
-				func = function()
-					AngrySparks_State.displayed = nil
-					AngrySparks_Pages = {}
-					AngrySparks_Categories = {}
-					self:UpdateTree()
-					self:UpdateSelected()
-					coreModule:UpdateDisplayed()
-					if self.window then self.window.tree:SetSelected(nil) end
-					self:Print("All pages have been deleted.")
-				end
-			},
-			defaults = {
-				type = "execute",
-				name = "Restore Defaults",
-				desc = "Restore configuration values to their default settings",
-				order = 10,
-				hidden = true,
-				cmdHidden = false,
-				confirm = true,
-				func = function()
-					configModule:RestoreDefaults()
-				end
-			},
-			output = {
-				type = "execute",
-				name = "Output",
-				desc = "Outputs currently displayed assignents to chat",
-				order = 11,
-				hidden = true,
-				cmdHidden = false,
-				confirm = true,
-				func = function()
-					self:OutputDisplayed()
-				end
-			},
-			send = {
-				type = "input",
-				name = "Send and Display",
-				desc = "Sends page with specified name",
-				order = 12,
-				hidden = true,
-				cmdHidden = false,
-				confirm = true,
-				get = function(info) return "" end,
-				set = function(info, val)
-					local result = self:DisplayPageByName(val:trim())
-					if result == false then
-						self:Print(RED_FONT_COLOR_CODE ..
-							"A page with the name \"" .. val:trim() .. "\" could not be found.|r")
-					elseif not result then
-						self:Print(RED_FONT_COLOR_CODE .. "You don't have permission to send a page.|r")
-					end
-				end
-			},
-			clear = {
-				type = "execute",
-				name = "Clear",
-				desc = "Clears currently displayed page",
-				order = 13,
-				hidden = true,
-				cmdHidden = false,
-				confirm = true,
-				func = function()
-					AngrySparks_ClearPage()
-				end
-			},
-			backup = {
-				type = "execute",
-				order = 20,
-				name = "Backup Pages",
-				desc = "Creates a backup of all pages with their current contents",
-				func = function()
-					self:CreateBackup()
-					self:Print("Created a backup of all pages.")
-				end
-			},
-			resetposition = {
-				type = "execute",
-				order = 22,
-				name = "Reset Position",
-				desc = "Resets position for the assignment display",
-				func = function()
-					self:ResetPosition()
-				end
-			},
-			version = {
-				type = "execute",
-				order = 21,
-				name = "Version Check",
-				desc = "Displays a list of all users (in the raid) running the addon and the version they're running",
-				func = function()
-					if (IsInRaid() or IsInGroup()) then
-						commModule.versionList = {} -- start with a fresh version list, when displaying it
-						commModule:SendOutMessage({ "VER_QUERY" })
-						self:ScheduleTimer("VersionCheckOutput", commModule.updateThrottle)
-						self:Print("Version check running...")
-					else
-						self:Print("You must be in a raid group to run the version check.")
-					end
-				end
-			},
-			lock = {
-				type = "execute",
-				order = 2,
-				name = "Toggle Lock",
-				desc = "Shows/hides the display mover (also available in game keybindings)",
-				func = function() self:ToggleLock() end
-			},
-			config = {
-				type = "group",
-				order = 5,
-				name = "General",
-				inline = true,
-				args = {
-					highlight = {
-						type = "input",
-						order = 1,
-						name = "Highlight",
-						desc =
-						"A list of words to highlight on displayed pages (separated by spaces or punctuation)\n\nUse 'Group' to highlight the current group you are in, ex. G2",
-						get = function(info) return configModule:GetConfig('highlight') end,
-						set = function(info, val)
-							configModule:SetConfig('highlight', val)
-							coreModule:UpdateDisplayed()
-						end
-					},
-					hideoncombat = {
-						type = "toggle",
-						order = 3,
-						name = "Hide on Combat",
-						desc = "Enable to hide display frame upon entering combat",
-						get = function(info) return configModule:GetConfig('hideoncombat') end,
-						set = function(info, val)
-							configModule:SetConfig('hideoncombat', val)
-						end
-					},
-					scale = {
-						type = "range",
-						order = 4,
-						name = "Scale",
-						desc = "Sets the scale of the edit window",
-						min = 0.3,
-						max = 3,
-						get = function(info) return configModule:GetConfig('scale') end,
-						set = function(info, val)
-							configModule:SetConfig('scale', val)
-							if AngrySparks.window then AngrySparks.window.frame:SetScale(val) end
-						end
-					},
-					backdrop = {
-						type = "toggle",
-						order = 5,
-						name = "Display Backdrop",
-						desc = "Enable to display a backdrop behind the assignment display",
-						get = function(info) return configModule:GetConfig('backdropShow') end,
-						set = function(info, val)
-							configModule:SetConfig('backdropShow', val)
-							self:SyncTextSizeFrames()
-						end
-					},
-					backdropcolor = {
-						type = "color",
-						order = 6,
-						name = "Backdrop Color",
-						desc = "The color used by the backdrop",
-						hasAlpha = true,
-						get = function(info)
-							local hex = configModule:GetConfig('backdropColor')
-							return utilsModule:HexToRGB(hex)
-						end,
-						set = function(info, r, g, b, a)
-							configModule:SetConfig('backdropColor', utilsModule:RGBToHex(r, g, b, a))
-							coreModule:UpdateMedia()
-							coreModule:UpdateDisplayed()
-						end
-					},
-					updatecolor = {
-						type = "color",
-						order = 7,
-						name = "Update Notification Color",
-						desc = "The color used by the update notification glow",
-						get = function(info)
-							local hex = configModule:GetConfig('glowColor')
-							return utilsModule:HexToRGB(hex)
-						end,
-						set = function(info, r, g, b)
-							configModule:SetConfig('glowColor', utilsModule:RGBToHex(r, g, b))
-							self.display_glow:SetVertexColor(r, g, b)
-							self.display_glow2:SetVertexColor(r, g, b)
-						end
-					}
-				}
-			},
-			font = {
-				type = "group",
-				order = 6,
-				name = "Font",
-				inline = true,
-				args = {
-					fontname = {
-						type = 'select',
-						order = 1,
-						dialogControl = 'LSM30_Font',
-						name = 'Face',
-						desc = 'Sets the font face used to display a page',
-						values = LSM:HashTable("font"),
-						get = function(info) return configModule:GetConfig('fontName') end,
-						set = function(info, val)
-							configModule:SetConfig('fontName', val)
-							coreModule:UpdateMedia()
-						end
-					},
-					fontheight = {
-						type = "range",
-						order = 2,
-						name = "Size",
-						desc = function()
-							return "Sets the font height used to display a page"
-						end,
-						min = 6,
-						max = 24,
-						step = 1,
-						get = function(info) return configModule:GetConfig('fontHeight') end,
-						set = function(info, val)
-							configModule:SetConfig('fontHeight', val)
-							coreModule:UpdateMedia()
-						end
-					},
-					fontflags = {
-						type = "select",
-						order = 3,
-						name = "Outline",
-						desc = "Sets the font outline used to display a page",
-						values = { ["NONE"] = "None", ["OUTLINE"] = "Outline", ["THICKOUTLINE"] = "Thick Outline", ["MONOCHROMEOUTLINE"] = "Monochrome" },
-						get = function(info) return configModule:GetConfig('fontFlags') end,
-						set = function(info, val)
-							configModule:SetConfig('fontFlags', val)
-							coreModule:UpdateMedia()
-						end
-					},
-					color = {
-						type = "color",
-						order = 4,
-						name = "Normal Color",
-						desc = "The normal color used to display assignments",
-						get = function(info)
-							local hex = configModule:GetConfig('color')
-							return utilsModule:HexToRGB(hex)
-						end,
-						set = function(info, r, g, b)
-							configModule:SetConfig('color', utilsModule:RGBToHex(r, g, b))
-							coreModule:UpdateMedia()
-							coreModule:UpdateDisplayed()
-						end
-					},
-					highlightcolor = {
-						type = "color",
-						order = 5,
-						name = "Highlight Color",
-						desc = "The color used to emphasize highlighted words",
-						get = function(info)
-							local hex = configModule:GetConfig('highlightColor')
-							return utilsModule:HexToRGB(hex)
-						end,
-						set = function(info, r, g, b)
-							configModule:SetConfig('highlightColor', utilsModule:RGBToHex(r, g, b))
-							coreModule:UpdateDisplayed()
-						end
-					},
-					linespacing = {
-						type = "range",
-						order = 6,
-						name = "Line Spacing",
-						desc = function()
-							return "Sets the line spacing used to display a page"
-						end,
-						min = 0,
-						max = 10,
-						step = 1,
-						get = function(info) return configModule:GetConfig('lineSpacing') end,
-						set = function(info, val)
-							configModule:SetConfig('lineSpacing', val)
-							coreModule:UpdateMedia()
-							coreModule:UpdateDisplayed()
-						end
-					},
-					editBoxFont = {
-						type = "toggle",
-						order = 7,
-						name = "Change Edit Box Font",
-						desc = "Enable to set edit box font to display font",
-						get = function(info) return configModule:GetConfig('editBoxFont') end,
-						set = function(info, val)
-							configModule:SetConfig('editBoxFont', val)
-							coreModule:UpdateMedia()
-						end
-					},
-				}
-			},
-			permissions = {
-				type = "group",
-				order = 7,
-				name = "Permissions",
-				inline = true,
-				args = {
-					allowall = {
-						type = "toggle",
-						order = 1,
-						name = "Allow All",
-						desc = "Enable to allow changes from any raid assistant, even if you aren't in a guild raid",
-						get = function(info) return configModule:GetConfig('allowall') end,
-						set = function(info, val)
-							configModule:SetConfig('allowall', val)
-							self:PermissionsUpdated()
-						end
-					},
-					allowplayers = {
-						type = "input",
-						order = 2,
-						name = "Allow Players",
-						desc =
-						"A list of players that when they are the raid leader to allow changes from all raid assistants",
-						get = function(info) return configModule:GetConfig('allowplayers') end,
-						set = function(info, val)
-							configModule:SetConfig('allowplayers', val)
-							self:PermissionsUpdated()
-						end
-					},
-				}
-			}
-		}
-	}
-
-	self:RegisterChatCommand(slashCommand, "ChatCommand")
-	LibStub("AceConfig-3.0"):RegisterOptionsTable("AngrySparks", options)
-
-	blizOptionsPanel = LibStub("AceConfigDialog-3.0"):AddToBlizOptions("AngrySparks", "Angry Sparks")
-	blizOptionsPanel.default = function() configModule:RestoreDefaults() end
+	local aceConfigDialog = LibStub("AceConfigDialog-3.0")
+	coreModule.blizOptionsPanel = aceConfigDialog:AddToBlizOptions("AngrySparks", "Angry Sparks")
+	coreModule.blizOptionsPanel.default = function() configModule:RestoreDefaults() end
 end
 
 function AngrySparks:ChatCommand(input)
 	if not input or input:trim() == "" then
-		Settings.OpenToCategory(blizOptionsPanel)
+		local aceConfigDialog = LibStub("AceConfigDialog-3.0")
 		-- Settings.OpenToCategory(blizOptionsPanel)
+		aceConfigDialog:Open("AngrySparks")
 	else
 		LibStub("AceConfigCmd-3.0").HandleCommand(self, slashCommand, "AngrySparks", input)
 	end
@@ -2118,57 +1749,12 @@ function AngrySparks:OnEnable()
 
 	self:ScheduleTimer("AfterEnable", 4)
 
-	self:RegisterEvent("PLAYER_REGEN_DISABLED")
-	self:RegisterEvent("PLAYER_GUILD_UPDATE")
-	self:RegisterEvent("GUILD_ROSTER_UPDATE")
+	eventsModule:OnEnableAddon()
 
 	C_GuildInfo.GuildRoster()
 
 	LSM.RegisterCallback(self, "LibSharedMedia_Registered", "UpdateMedia")
 	LSM.RegisterCallback(self, "LibSharedMedia_SetGlobal", "UpdateMedia")
-end
-
-function AngrySparks:PARTY_LEADER_CHANGED()
-	self:PermissionsUpdated()
-	if AngrySparks_State.displayed and not self:IsValidRaid() then
-		self:ClearDisplayed()
-	end
-end
-
-function AngrySparks:GROUP_JOINED()
-	commModule:SendVerQuery()
-	self:UpdateDisplayedIfNewGroup()
-	self:ScheduleTimer(function() commModule:SendRequestDisplay() end, 0.5)
-end
-
-function AngrySparks:PLAYER_REGEN_DISABLED()
-	if configModule:GetConfig('hideoncombat') then
-		self:HideDisplay()
-	end
-end
-
-function AngrySparks:GROUP_ROSTER_UPDATE()
-	self:UpdateSelected()
-	if not (IsInRaid() or IsInGroup()) then
-		if AngrySparks_State.displayed then
-			self:ClearDisplayed()
-		end
-		currentGroup = nil
-		warnedPermission = false
-	else
-		self:UpdateDisplayedIfNewGroup()
-	end
-end
-
-function AngrySparks:PLAYER_GUILD_UPDATE()
-	self:PermissionsUpdated()
-end
-
-function AngrySparks:GUILD_ROSTER_UPDATE(...)
-	local canRequestRosterUpdate = ...
-	if canRequestRosterUpdate then
-		C_GuildInfo.GuildRoster()
-	end
 end
 
 function AngrySparks:AfterEnable()
@@ -2179,9 +1765,7 @@ function AngrySparks:AfterEnable()
 		self:ClearDisplayed()
 	end
 
-	self:RegisterEvent("PARTY_LEADER_CHANGED")
-	self:RegisterEvent("GROUP_JOINED")
-	self:RegisterEvent("GROUP_ROSTER_UPDATE")
+	eventsModule:AfterEnableAddon()
 
 	commModule:SendRequestDisplay()
 	self:UpdateDisplayedIfNewGroup()

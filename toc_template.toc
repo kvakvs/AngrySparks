@@ -22,6 +22,8 @@ Src/UiDisplay.lua
 Src/Utils.lua
 Src/Config.lua
 Src/Comm.lua
+Src/Events.lua
+Src/Slash.lua
 
 #
 # Do not edit - this file is generated from TOC_TEMPLATE.TOC

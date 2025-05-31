@@ -129,3 +129,7 @@ Code Review Guidelines
 - Confirm documentation completeness
 
 Remember to always refer to the official Lua documentation and relevant framework documentation for specific implementation details and best practices.
+
+Formatting
+
+- Offer a new line after groups of variable declarations. Offer a new line before a loop or branch operator.
