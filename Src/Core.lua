@@ -25,6 +25,7 @@
 ---@field clickOverlay Frame
 ---@field pagination Frame
 ---@field paginationText FontString
+---@field frame Frame
 ---@field mover Frame
 ---@field direction_button Button
 ---@field display_glow Texture
@@ -952,8 +953,9 @@ function AngrySparks:PermissionCheck(sender)
     if not sender then sender = utilsModule:PlayerFullName() end
 
     if (IsInRaid() or IsInGroup()) then
-        return (UnitIsGroupLeader(utilsModule:EnsureUnitShortName(sender)) == true or UnitIsGroupAssistant(utilsModule:EnsureUnitShortName(sender)) == true) and
-            self:IsValidRaid()
+        return (UnitIsGroupLeader(utilsModule:EnsureUnitShortName(sender)) == true
+                or UnitIsGroupAssistant(utilsModule:EnsureUnitShortName(sender)) == true)
+            and self:IsValidRaid()
     else
         return sender == utilsModule:PlayerFullName()
     end
@@ -1458,9 +1460,9 @@ function AngrySparks:OutputDisplayed(id)
                 :gsub(utilsModule:Pattern('{bl}'), 'Bloodlust')
                 :gsub(utilsModule:Pattern('{hero}'), "{heroism}")
                 :gsub(utilsModule:Pattern('{heroism}'), 'Heroism')
-                :gsub(utilsModule:Pattern('{deathknight}'), LOCALIZED_CLASS_NAMES_MALE["DEATHKNIGHT"])
-                :gsub(utilsModule:Pattern('{monk}'), LOCALIZED_CLASS_NAMES_MALE["MONK"])
-                :gsub(utilsModule:Pattern('{demonhunter}'), LOCALIZED_CLASS_NAMES_MALE["DEMONHUNTER"])
+                :gsub(utilsModule:Pattern('{deathknight}'), LOCALIZED_CLASS_NAMES_MALE["DEATHKNIGHT"] or 'deathknight')
+                :gsub(utilsModule:Pattern('{monk}'), LOCALIZED_CLASS_NAMES_MALE["MONK"] or 'monk')
+                :gsub(utilsModule:Pattern('{demonhunter}'), LOCALIZED_CLASS_NAMES_MALE["DEMONHUNTER"] or 'demonhunter')
         end
 
         local lines = { strsplit("\n", output) }

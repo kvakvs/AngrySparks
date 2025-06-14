@@ -1,0 +1,16 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+This script creates text assignments for World of Warcraft raid from Google spreadsheets.
+This is a Python script which is invoked manually once per week.
+This is a CLI tool.
+The tool takes a single argument - path to a TOML file which contains: url to the Google spreadsheet, raid name: one of [MC, BWL, AQ40, Naxx], and page name in the spreadsheet.
+
+The script reads a Google Sheets document or just one page, accesses separate cells, and prints out text assignments into a text file. The spreadsheet is publicly available by URL.
+
+Prefer suggesting type hints for variables, arguments and functions.
+
+
+Use best Python programming practices. Use powershell commands to execute necessary actions.

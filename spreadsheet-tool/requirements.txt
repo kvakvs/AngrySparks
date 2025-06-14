@@ -1,0 +1,14 @@
+# Core dependencies for the WoW Raid Assignment Tool
+requests>=2.31.0
+# pandas>=2.1.0
+openpyxl>=3.1.0
+
+# Optional dependencies for enhanced functionality
+xlsxwriter>=3.1.0  # For Excel file generation if needed
+python-dateutil>=2.8.0  # For date handling in pandas
+
+# Development dependencies (optional)
+pytest>=7.4.0
+black>=23.0.0
+flake8>=6.0.0
+mypy>=1.5.0

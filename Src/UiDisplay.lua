@@ -41,7 +41,7 @@ function uiDisplayModule:CreateDisplay()
 		frame:SetMaxResize(830, 1)
 	end
 	frame:SetFrameStrata("MEDIUM")
-	self.frame = frame
+	addon.frame = frame
 
 	lwin.RegisterConfig(frame, AngrySparks_State.display)
 	lwin.RestorePosition(frame)
