@@ -35,7 +35,7 @@ A Python CLI tool that reads Google Sheets containing World of Warcraft raid ass
 2. Edit `config.toml` with your specific values:
    - `spreadsheet_url`: URL to your Google Sheets document (must be publicly accessible)
    - `raid_name`: One of `MC`, `BWL`, `AQ40`, or `Naxx`
-   - `page_name`: Name of the specific sheet/tab in your spreadsheet
+   - `sheet`: Name of the specific sheet/tab in your spreadsheet
 
 ### Google Sheets Setup
 

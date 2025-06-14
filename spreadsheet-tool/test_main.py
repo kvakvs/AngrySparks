@@ -43,7 +43,7 @@ class TestRaidAssignmentGenerator:
         generator.config = {
             "spreadsheet_url": "https://docs.google.com/spreadsheets/d/test/edit",
             "raid_name": "INVALID_RAID",
-            "page_name": "Test Page"
+            "sheet": "Test Page"
         }
 
         with pytest.raises(ValueError, match="Unsupported raid name"):
@@ -55,7 +55,7 @@ class TestRaidAssignmentGenerator:
         generator.config = {
             "spreadsheet_url": "invalid_url",
             "raid_name": "MC",
-            "page_name": "Test Page"
+            "sheet": "Test Page"
         }
 
         with pytest.raises(ValueError, match="Invalid spreadsheet URL format"):
@@ -67,7 +67,7 @@ class TestRaidAssignmentGenerator:
         generator.config = {
             "spreadsheet_url": "https://docs.google.com/spreadsheets/d/test123/edit",
             "raid_name": "MC",
-            "page_name": "MC Assignments"
+            "sheet": "MC Assignments"
         }
 
         # Should not raise any exception
@@ -76,7 +76,7 @@ class TestRaidAssignmentGenerator:
     def test_convert_to_csv_url(self):
         """Test conversion of Google Sheets URL to CSV export URL."""
         generator = RaidAssignmentGenerator("test.toml")
-        generator.config = {"page_name": "Test Page"}
+        generator.config = {"sheet": "Test Page"}
 
         sheets_url = "https://docs.google.com/spreadsheets/d/1234567890abcdef/edit#gid=0"
         csv_url = generator._convert_to_csv_url(sheets_url)
@@ -135,7 +135,7 @@ class TestConfigFileLoading:
         valid_config = """
         spreadsheet_url = "https://docs.google.com/spreadsheets/d/test123/edit"
         raid_name = "MC"
-        page_name = "MC Assignments"
+        sheet = "MC Assignments"
         """
 
         with tempfile.NamedTemporaryFile(mode='w', suffix='.toml', delete=False) as f:
@@ -148,7 +148,7 @@ class TestConfigFileLoading:
 
                 assert generator.config["spreadsheet_url"] == "https://docs.google.com/spreadsheets/d/test123/edit"
                 assert generator.config["raid_name"] == "MC"
-                assert generator.config["page_name"] == "MC Assignments"
+                assert generator.config["sheet"] == "MC Assignments"
 
             finally:
                 os.unlink(f.name)

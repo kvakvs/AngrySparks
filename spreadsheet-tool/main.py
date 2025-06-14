@@ -41,7 +41,7 @@ class RaidAssignmentGenerator:
 
     def _validate_config(self) -> None:
         """Validate the loaded configuration."""
-        required_keys = ["spreadsheet_url", "raid_name", "page_name"]
+        required_keys = ["spreadsheet_url", "raid_name", "sheet"]
 
         for key in required_keys:
             if key not in self.config:
@@ -65,7 +65,9 @@ class RaidAssignmentGenerator:
         """Fetch data from Google Sheets."""
         try:
             # Convert Google Sheets URL to CSV export format
-            sheet_url = self._convert_to_csv_url(self.config["spreadsheet_url"])
+            sheet_url = self._convert_to_csv_url(url=self.config["spreadsheet_url"],
+                                                 sheet=self.config["sheet"])
+            print("Requesting sheet data from: ", sheet_url)
 
             # Fetch the data
             response = requests.get(sheet_url, timeout=30)
@@ -84,25 +86,24 @@ class RaidAssignmentGenerator:
         except Exception as e:
             raise RuntimeError(f"Error processing spreadsheet data: {e}")
 
-    def _convert_to_csv_url(self, sheets_url: str) -> str:
+    def _convert_to_csv_url(self, url: str, sheet: str) -> str:
         """Convert Google Sheets URL to CSV export URL."""
         # Extract sheet ID from the URL
         # Example: https://docs.google.com/spreadsheets/d/SHEET_ID/edit#gid=0
-        if "docs.google.com/spreadsheets" not in sheets_url:
+        if "docs.google.com/spreadsheets" not in url:
             raise ValueError("URL must be a Google Sheets URL")
 
         try:
             # Extract sheet ID
-            parts = sheets_url.split("/")
+            parts = url.split("/")
             sheet_id = parts[parts.index("d") + 1]
 
             # Construct CSV export URL
             csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
 
             # Add specific sheet/page if needed
-            page_name = self.config.get("page_name")
-            if page_name:
-                csv_url += f"&gid=0"  # This would need proper GID handling
+            if sheet:
+                csv_url += f"&sheet={sheet}"  # This would need proper GID handling
 
             return csv_url
 
@@ -204,7 +205,7 @@ Examples:
         if args.verbose:
             print(f"Raid: {generator.config['raid_name']}")
             print(f"Spreadsheet: {generator.config['spreadsheet_url']}")
-            print(f"Page: {generator.config['page_name']}")
+            print(f"Page: {generator.config['sheet']}")
 
         # Fetch data from Google Sheets
         print("Fetching data from Google Sheets...")

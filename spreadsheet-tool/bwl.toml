@@ -3,13 +3,13 @@
 
 # URL to the Google Sheets document (must be publicly accessible)
 # Example: https://docs.google.com/spreadsheets/d/1234567890abcdef/edit#gid=0
-spreadsheet_url = "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID_HERE/edit#gid=0"
+spreadsheet_url = "https://docs.google.com/spreadsheets/d/1v5XtszePqiWwyqbL0702waMUbA8UnTSqaTZVv5PBFTc/edit?gid=681545185#gid=681545185"
 
 # Raid name - must be one of: MC, BWL, AQ40, Naxx
-raid_name = "MC"
+raid_name = "BWL"
 
 # Name of the specific page/sheet within the spreadsheet
-page_name = "MC Assignments"
+sheet = "BWL"
 
 # Optional: Output file name (defaults to <raid_name>_assignments.txt)
 # output_file = "molten_core_assignments.txt"
@@ -26,16 +26,16 @@ custom_header = "Guild Raid Assignments"
 #
 # For Molten Core:
 # raid_name = "MC"
-# page_name = "MC Assignments"
+# sheet = "MC Assignments"
 #
 # For Blackwing Lair:
 # raid_name = "BWL"
-# page_name = "BWL Assignments"
+# sheet = "BWL Assignments"
 #
 # For Ahn'Qiraj 40:
 # raid_name = "AQ40"
-# page_name = "AQ40 Assignments"
+# sheet = "AQ40 Assignments"
 #
 # For Naxxramas:
 # raid_name = "Naxx"
-# page_name = "Naxx Assignments"
+# sheet = "Naxx Assignments"
