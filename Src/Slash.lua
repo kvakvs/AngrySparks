@@ -5,6 +5,7 @@ local coreModule = LibStub("AngrySparks-Core")
 local commModule = LibStub("AngrySparks-Comm")
 local configModule = LibStub("AngrySparks-Config")
 local utilsModule = LibStub("AngrySparks-Utils")
+local pagesModule = LibStub("AngrySparks-Pages")
 
 local LSM = LibStub("LibSharedMedia-3.0")
 
@@ -264,8 +265,7 @@ end
 
 function slashModule:Initialize()
     local addon = coreModule.addon
-    local ver = commModule.AngrySparks_Version
-    if ver:sub(1, 1) == "@" then ver = "dev" end
+    local ver = commModule:GetVersion()
 
     local windowCommand = {
         type = "execute",
@@ -339,7 +339,7 @@ function slashModule:Initialize()
         confirm = true,
         get = function(info) return "" end,
         set = function(info, val)
-            local result = addon:DisplayPageByName(val:trim())
+            local result = pagesModule:DisplayPageByName(val:trim())
             if result == false then
                 addon:Print(RED_FONT_COLOR_CODE ..
                     "A page with the name \"" .. val:trim() .. "\" could not be found.|r")
@@ -356,7 +356,7 @@ function slashModule:Initialize()
         hidden = true,
         cmdHidden = false,
         confirm = true,
-        func = function() AngrySparks_ClearPage() end
+        func = function() pagesModule:ClearPage() end
     }
     local backupCommand = {
         type = "execute",
@@ -381,14 +381,14 @@ function slashModule:Initialize()
         name = "Version Check",
         desc = "Displays a list of all users (in the raid) running the addon and the version they're running",
         func = function()
-            if (IsInRaid() or IsInGroup()) then
+            -- if (IsInRaid() or IsInGroup()) then
                 commModule.versionList = {} -- start with a fresh version list, when displaying it
-                commModule:SendOutMessage({ "VER_QUERY" })
-                addon:ScheduleTimer("VersionCheckOutput", commModule.updateThrottle)
+                commModule:SendVerQuery()
+                addon:ScheduleTimer(function() commModule:VersionCheckOutput() end, commModule.updateThrottle)
                 addon:Print("Version check running...")
-            else
-                addon:Print("You must be in a raid group to run the version check.")
-            end
+            -- else
+                -- addon:Print("You must be in a raid group to run the version check.")
+            -- end
         end
     }
     local lockCommand = {

@@ -20,15 +20,15 @@ end
 ---@param a number? 0..1 range
 ---@return string Either RRGGBB or RRGGBBAA string
 function utilsModule:RGBToHex(r, g, b, a)
-	r = math.ceil(255 * r)
-	g = math.ceil(255 * g)
-	b = math.ceil(255 * b)
-	if a == nil then
-		return string.format("%02x%02x%02x", r, g, b)
-	else
-		a = math.ceil(255 * a)
-		return string.format("%02x%02x%02x%02x", r, g, b, a)
-	end
+    r = math.ceil(255 * r)
+    g = math.ceil(255 * g)
+    b = math.ceil(255 * b)
+    if a == nil then
+        return string.format("%02x%02x%02x", r, g, b)
+    else
+        a = math.ceil(255 * a)
+        return string.format("%02x%02x%02x%02x", r, g, b, a)
+    end
 end
 
 ---Splits a string into a table of strings, using a delimiter
@@ -108,12 +108,25 @@ end
 ---@param pattern string
 ---@return string
 function utilsModule:Pattern(pattern)
-	local p = pattern:gsub("(%%?)(.)", function(percent, letter)
-		if percent ~= "" or not letter:match("%a") then
-			return percent .. letter
-		else
-			return string.format("[%s%s]", letter:lower(), letter:upper())
-		end
-	end)
-	return p
+    local p = pattern:gsub("(%%?)(.)", function(percent, letter)
+        if percent ~= "" or not letter:match("%a") then
+            return percent .. letter
+        else
+            return string.format("[%s%s]", letter:lower(), letter:upper())
+        end
+    end)
+    return p
+end
+
+function utilsModule:Dump(o)
+    if type(o) == 'table' then
+        local s = '{ '
+        for k, v in pairs(o) do
+            if type(k) ~= 'number' then k = '"' .. k .. '"' end
+            s = s .. '[' .. k .. '] = ' .. self:Dump(v) .. ','
+        end
+        return s .. '} '
+    else
+        return tostring(o)
+    end
 end
