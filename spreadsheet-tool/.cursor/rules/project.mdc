@@ -14,3 +14,9 @@ Prefer suggesting type hints for variables, arguments and functions.
 
 
 Use best Python programming practices. Use powershell commands to execute necessary actions.
+
+When creating output, follow the AngryGirls (AngrySparks) output syntax rules:
+* Category is created by prefixing raid name with a single # symbol.
+* A page is created by prefixing the name with a double ## symbol (similar to Markdown).
+
+* Use World of Warcraft raid targets where appropriate such as {rt1} for star, {rt7} for cross, {rt8} for skull etc.

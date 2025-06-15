@@ -16,6 +16,9 @@ from urllib.parse import urlparse
 import requests
 import pandas as pd
 
+from sparks.bwl import process_bwl_assignments
+# from sparks.mc import process_mc_assignments
+
 
 class RaidAssignmentGenerator:
     """Generates raid assignments from Google Sheets data."""
@@ -134,6 +137,14 @@ class RaidAssignmentGenerator:
         # the actual structure of your Google Sheets
         assignments.append(f"Processing {raid_name} assignments...")
         assignments.append(f"Found {len(self.sheet_data)} entries in spreadsheet")
+
+        # if raid_name == "MC":
+        #     assignments.extend(process_mc_assignments(self.sheet_data))
+        if raid_name == "BWL":
+            assignments.extend(process_bwl_assignments(self.sheet_data))
+        # elif raid_name == "AQ40":
+        #     assignments.extend(process_aq40_assignments(self.sheet_data))
+        # elif raid_name == "Naxx":
 
         # Example processing (would need real implementation):
         # for index, row in self.sheet_data.iterrows():
