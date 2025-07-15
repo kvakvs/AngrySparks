@@ -13,10 +13,10 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 from urllib.parse import urlparse
 
-import requests
 import pandas as pd
 
 from sparks.bwl import process_bwl_assignments
+from sparks.google_web_client import GoogleWebClient
 # from sparks.mc import process_mc_assignments
 
 
@@ -30,13 +30,16 @@ class RaidAssignmentGenerator:
         self.config_path = Path(config_path)
         self.config: Dict[str, Any] = {}
         self.sheet_data: Optional[pd.DataFrame] = None
+        self.web_client = GoogleWebClient()
 
     def load_config(self) -> None:
         """Load configuration from TOML file."""
         try:
             with open(self.config_path, 'rb') as f:
                 self.config = tomllib.load(f)
+
             self._validate_config()
+            self.web_client.set_config(self.config)
         except FileNotFoundError:
             raise FileNotFoundError(f"Configuration file not found: {self.config_path}")
         except tomllib.TOMLDecodeError as e:
@@ -63,55 +66,6 @@ class RaidAssignmentGenerator:
                 raise ValueError("Invalid spreadsheet URL format")
         except Exception:
             raise ValueError("Invalid spreadsheet URL format")
-
-    def fetch_sheet_data(self) -> None:
-        """Fetch data from Google Sheets."""
-        try:
-            # Convert Google Sheets URL to CSV export format
-            sheet_url = self._convert_to_csv_url(url=self.config["spreadsheet_url"],
-                                                 sheet=self.config["sheet"])
-            print("Requesting sheet data from: ", sheet_url)
-
-            # Fetch the data
-            response = requests.get(sheet_url, timeout=30)
-            response.raise_for_status()
-
-            # Parse as CSV
-            from io import StringIO
-            self.sheet_data = pd.read_csv(StringIO(response.text))
-
-            print(f"Successfully loaded {len(self.sheet_data)} rows from spreadsheet")
-
-        except requests.RequestException as e:
-            raise RuntimeError(f"Failed to fetch spreadsheet data: {e}")
-        except pd.errors.EmptyDataError:
-            raise RuntimeError("Spreadsheet appears to be empty")
-        except Exception as e:
-            raise RuntimeError(f"Error processing spreadsheet data: {e}")
-
-    def _convert_to_csv_url(self, url: str, sheet: str) -> str:
-        """Convert Google Sheets URL to CSV export URL."""
-        # Extract sheet ID from the URL
-        # Example: https://docs.google.com/spreadsheets/d/SHEET_ID/edit#gid=0
-        if "docs.google.com/spreadsheets" not in url:
-            raise ValueError("URL must be a Google Sheets URL")
-
-        try:
-            # Extract sheet ID
-            parts = url.split("/")
-            sheet_id = parts[parts.index("d") + 1]
-
-            # Construct CSV export URL
-            csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
-
-            # Add specific sheet/page if needed
-            if sheet:
-                csv_url += f"&sheet={sheet}"  # This would need proper GID handling
-
-            return csv_url
-
-        except (ValueError, IndexError):
-            raise ValueError("Could not extract sheet ID from URL")
 
     def generate_assignments(self) -> str:
         """Generate formatted raid assignments text."""
@@ -172,6 +126,9 @@ class RaidAssignmentGenerator:
         except IOError as e:
             raise RuntimeError(f"Failed to save assignments to file: {e}")
 
+    def fetch_sheet_data(self) -> None:
+        self.sheet_data = self.web_client.fetch_sheet_data()
+
 
 def main() -> int:
     """Main entry point for the CLI application."""
@@ -205,29 +162,29 @@ Examples:
 
     try:
         # Initialize generator
-        generator = RaidAssignmentGenerator(args.config_file)
+        app = RaidAssignmentGenerator(args.config_file)
 
         if args.verbose:
             print(f"Loading configuration from: {args.config_file}")
 
         # Load configuration
-        generator.load_config()
+        app.load_config()
 
         if args.verbose:
-            print(f"Raid: {generator.config['raid_name']}")
-            print(f"Spreadsheet: {generator.config['spreadsheet_url']}")
-            print(f"Page: {generator.config['sheet']}")
+            print(f"Raid: {app.config['raid_name']}")
+            print(f"Spreadsheet: {app.config['spreadsheet_url']}")
+            print(f"Page: {app.config['sheet']}")
 
         # Fetch data from Google Sheets
         print("Fetching data from Google Sheets...")
-        generator.fetch_sheet_data()
+        app.fetch_sheet_data()
 
         # Generate assignments
         print("Generating raid assignments...")
-        assignments = generator.generate_assignments()
+        assignments = app.generate_assignments()
 
         # Save to file
-        output_file = generator.save_to_file(assignments, args.output)
+        output_file = app.save_to_file(assignments, args.output)
 
         print(f"✓ Raid assignments generated successfully!")
         return 0

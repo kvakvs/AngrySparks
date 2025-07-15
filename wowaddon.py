@@ -10,7 +10,7 @@ import subprocess
 import sys
 import zipfile
 
-VERSION = '2025.5.0'  # year.month.build_num
+VERSION = '2025.7.0'  # year.month.build_num
 
 ADDON_NAME_CLASSIC = 'AngrySparks'  # Directory and zip name
 ADDON_TITLE_CLASSIC = "Angry Sparks"  # Title field in TOC

@@ -9,7 +9,7 @@ spreadsheet_url = "https://docs.google.com/spreadsheets/d/1v5XtszePqiWwyqbL0702w
 raid_name = "BWL"
 
 # Name of the specific page/sheet within the spreadsheet
-sheet = "BWL"
+sheet = 3
 
 # Optional: Output file name (defaults to <raid_name>_assignments.txt)
 # output_file = "molten_core_assignments.txt"

@@ -250,7 +250,7 @@ function commModule:SendOutMessage(data, channel, target)
     local channelOut = self:GetChannelToSend(channel)
     if not channelOut then
         -- nil means we're sending to self directly
-        print("to self: ", utilsModule:Dump(data))
+        -- print("to self: ", utilsModule:Dump(data))
         self:ProcessMessage(utilsModule:PlayerFullName(), data)
         return
     end

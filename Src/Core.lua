@@ -216,10 +216,27 @@ function AngrySparks_PageMenu(pageId)
 
     if not PagesDropDownList then
         PagesDropDownList = {
-            { notCheckable = true, isTitle = true },
-            { text = "Rename",     notCheckable = true, func = function(frame, pageId1) AngrySparks_RenamePage(pageId) end },
-            { text = "Delete",     notCheckable = true, func = function(frame, pageId2) AngrySparks_DeletePage(pageId) end },
-            { text = "Category",   notCheckable = true, hasArrow = true },
+            {
+                notCheckable = true,
+                isTitle = true
+            },
+            {
+                text = "Rename Page",
+                notCheckable = true,
+                func = function(frame1, pageId1)
+                    AngrySparks_RenamePage(pageId1)
+                end
+            },
+            {
+                text = "Delete Page",
+                notCheckable = true,
+                func = function(frame2, pageId2) AngrySparks_DeletePage(pageId2) end
+            },
+            {
+                text = "Change Category",
+                notCheckable = true,
+                hasArrow = true
+            },
         }
     end
 
